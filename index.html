@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>요알못 나혼산 · 저녁 메뉴 정하기</title>
+<style>
+  :root {
+    --bg: #faf8f5;
+    --card: #ffffff;
+    --ink: #1f1d1a;
+    --sub: #6b665f;
+    --line: #e8e3da;
+    --accent: #d9622b;
+    --accent-soft: #fbece3;
+    --todo: #8a6d00;
+    --todo-bg: #fff6d6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 32px 20px 64px; }
+  .eyebrow { font-size: 14px; color: var(--accent); font-weight: 700; margin: 0 0 8px; }
+  h1 { font-size: 26px; line-height: 1.35; margin: 0 0 12px; letter-spacing: -0.02em; }
+  .lead { color: var(--sub); margin: 0 0 28px; font-size: 16px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+  h2 { font-size: 15px; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  .num { display: inline-flex; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 13px; align-items: center; justify-content: center; flex: none; }
+  p { margin: 0 0 8px; }
+  .hint { font-size: 13px; color: var(--sub); }
+  .chips, .cats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 10px 16px; font-size: 15px; font-family: inherit; color: var(--ink); min-height: 44px; }
+  .cat { border: 1.5px solid var(--accent); background: #fff; color: var(--accent); border-radius: 12px; padding: 12px 18px; font-size: 16px; font-weight: 700; font-family: inherit; min-height: 48px; flex: 1 1 calc(50% - 8px); }
+  .other { display: block; margin-top: 14px; font-size: 13px; color: var(--sub); }
+  .other-input { width: 100%; margin-top: 6px; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 16px; font-family: inherit; color: var(--ink); background: #fff; min-height: 48px; }
+  .other-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .badge { display: inline-block; font-size: 12px; font-weight: 700; color: var(--todo); background: var(--todo-bg); border-radius: 6px; padding: 2px 8px; margin-left: 6px; vertical-align: middle; }
+  .result { background: var(--accent-soft); border-radius: 12px; padding: 14px 16px; margin-top: 12px; }
+  .result strong { font-size: 18px; }
+  ol.rank { margin: 12px 0 0; padding-left: 22px; }
+  ol.rank li { margin-bottom: 4px; }
+  .card-lines { list-style: none; margin: 0; padding: 0; }
+  .card-lines li { padding: 10px 0; border-top: 1px solid var(--line); }
+  .card-lines li:first-child { border-top: 0; padding-top: 0; }
+  .card-lines b { display: block; font-size: 13px; color: var(--sub); font-weight: 600; }
+  footer { text-align: center; font-size: 13px; color: var(--sub); margin-top: 24px; }
+  @media (max-width: 420px) {
+    h1 { font-size: 23px; }
+    main { padding: 24px 16px 48px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">요알못 나혼산 · 혼자 살면서 요리를 잘 못하는 사람</p>
+  <h1>저녁 메뉴를 정할 때, 최근에 먹지 않은 메뉴가 바로 떠오르지 않아서 불편하다.</h1>
+  <p class="lead">지금은 머릿속 기억으로 고르고, 안 떠오르면 간단히 때웁니다.</p>
+
+  <section aria-labelledby="s1">
+    <h2 id="s1"><span class="num">1</span>최근 며칠간 먹은 저녁 메뉴를 고르세요</h2>
+    <p class="hint">고른 메뉴는 추천에서 빠집니다.</p>
+    <div class="chips">
+      <button class="chip" type="button">메뉴 A</button>
+      <button class="chip" type="button">메뉴 B</button>
+      <button class="chip" type="button">메뉴 C</button>
+      <button class="chip" type="button">메뉴 D</button>
+      <button class="chip" type="button">기타</button>
+    </div>
+    <label class="other" for="other-menu">기타: 목록에 없는 메뉴는 직접 쓰세요</label>
+    <input id="other-menu" class="other-input" type="text" placeholder="먹은 메뉴를 직접 입력">
+    <p class="hint" style="margin-top:12px">메뉴 A~D는 예시 값입니다.<span class="badge">나중에 연결</span></p>
+  </section>
+
+  <section aria-labelledby="s2">
+    <h2 id="s2"><span class="num">2</span>오늘 땡기는 분야를 누르세요</h2>
+    <div class="cats">
+      <button class="cat" type="button">건강식</button>
+      <button class="cat" type="button">한식</button>
+      <button class="cat" type="button">일식</button>
+      <button class="cat" type="button">중식</button>
+      <button class="cat" type="button">양식</button>
+      <button class="cat" type="button">분식</button>
+    </div>
+  </section>
+
+  <section aria-labelledby="s3">
+    <h2 id="s3"><span class="num">3</span>먹은 메뉴를 뺀 저녁 메뉴를 추천합니다</h2>
+    <div class="result">
+      <strong>추천 메뉴 (예시)</strong><span class="badge">나중에 연결</span>
+      <p class="hint" style="margin-top:6px">분야별 추천 메뉴 목록이 연결되면 이 자리에 나옵니다.</p>
+    </div>
+  </section>
+
+  <section aria-labelledby="s4">
+    <h2 id="s4">내 취향 베스트 1~5위<span class="badge">나중에 연결</span></h2>
+    <p class="hint">추천받아 고른 메뉴의 횟수로 기억합니다. 아래는 예시 값입니다.</p>
+    <ol class="rank">
+      <li>메뉴 A (예시)</li>
+      <li>메뉴 B (예시)</li>
+      <li>메뉴 C (예시)</li>
+      <li>메뉴 D (예시)</li>
+      <li>메뉴 E (예시)</li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="s5">
+    <h2 id="s5">기획 카드</h2>
+    <ul class="card-lines">
+      <li><b>불편 한 줄</b>나는 저녁 메뉴를 정할 때, 최근에 먹지 않은 메뉴가 바로 떠오르지 않아서 불편하다.</li>
+      <li><b>누가</b>혼자 살면서 요리를 잘 못하는 사람(요알못 나혼산)</li>
+      <li><b>지금은 어떻게 버티나</b>머릿속 기억으로 고르고, 안 떠오르면 간단히 때운다.</li>
+      <li><b>이 페이지가 해 줄 한 가지</b>최근 며칠간 먹은 저녁 메뉴를 고르고 땡기는 분야(건강식·한식·일식·중식·양식·분식)를 누르면, 먹은 메뉴를 뺀 저녁 메뉴를 추천한다.</li>
+      <li><b>필요한 것</b>저장 (추천받아 고른 메뉴의 횟수로 취향 베스트 1~5위 기억 + 분야별 추천 메뉴 목록)</li>
+    </ul>
+  </section>
+
+  <footer>저장 기능과 추천 목록은 다음 단계에서 연결합니다.</footer>
+</main>
+</body>
+</html>
