@@ -594,9 +594,33 @@
   });
 
   // 2~3단계: 추천 4개 뽑기
-  // 랜덤 추천 때 최애 메뉴가 나올 확률: 1개 5%, 2개 7.5%, 4개 10%처럼 개수가 2배가 될 때마다 2.5%p씩 늘고 최대 20%
-  function favChance(n) { return n < 1 ? 0 : Math.min(0.2, 0.05 + 0.025 * Math.log(n) / Math.LN2); }
-  window.__favChance = favChance;
+  // 랜덤 추천: 한식·양식·일식·중식·분식·최애 6칸이 똑같이 1/6(16.7%)씩.
+  // 추천 한 번에 최애 메뉴가 끼어들 확률은 1/6이고, 최애가 1개든 10개든 같고, 최애끼리는 똑같은 확률이에요.
+  // 최애 메뉴는 분야 칸에서는 빼서 따로 세므로, 분야로 한 번 더 뽑히는 일은 없어요.
+  var FAV_SIXTH = 1 / 6;
+  function drawBalanced(n, exclude) { // 5개 분야에서 똑같은 확률로 n개 (같은 메뉴는 한 번만)
+    var b = { '한식': [], '양식': [], '일식': [], '중식': [], '분식': [] };
+    pool('랜덤').forEach(function (m) {
+      if (exclude.indexOf(m) >= 0 || favs.indexOf(m) >= 0) return;
+      var c = info(m).category;
+      if (b[c]) b[c].push(m);
+    });
+    var keys = Object.keys(b).filter(function (k) { return b[k].length; }), out = [];
+    while (out.length < n && keys.length) {
+      var k = keys[Math.floor(Math.random() * keys.length)];
+      out.push(b[k].splice(Math.floor(Math.random() * b[k].length), 1)[0]);
+      keys = keys.filter(function (x) { return b[x].length; });
+    }
+    return out;
+  }
+  function drawRandom(exclude) {
+    var favOk = pool('랜덤').filter(function (m) { return favs.indexOf(m) >= 0 && exclude.indexOf(m) < 0; });
+    if (favOk.length && Math.random() < FAV_SIXTH) {
+      var fav = favOk[Math.floor(Math.random() * favOk.length)];
+      return shuffle([fav].concat(drawBalanced(3, exclude)));
+    }
+    return shuffle(drawBalanced(4, exclude));
+  }
   var currentCat = '';
   var lastShown = [];
   var picked = false;
@@ -614,15 +638,15 @@
     $('pick-btn').disabled = false;
     if (!MENUS) { hint.textContent = '메뉴를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.'; return; }
     var all = pool(currentCat);
-    var favPool = currentCat === '랜덤' ? all.filter(function (n) { return favs.indexOf(n) >= 0; }) : [];
-    if (favPool.length && favPool.length < all.length) all = all.filter(function (n) { return favPool.indexOf(n) < 0; }); // 최애는 아래 추첨으로만 나옴
     if (!all.length) { hint.textContent = currentCat + ' 분야에는 추천할 메뉴가 없어요. 다른 분야를 골라 보세요.'; lastShown = []; return; }
-    var fresh = again ? all.filter(function (n) { return lastShown.indexOf(n) < 0; }) : all;
-    var rest = all.filter(function (n) { return fresh.indexOf(n) < 0; });
-    var chosen = shuffle(fresh).concat(shuffle(rest)).slice(0, 4);
-    if (favPool.length && all.length >= 3 && Math.random() < favChance(favPool.length)) { // 랜덤 추천일 때 최애 개수에 따른 확률로 최애 하나를 섞어 넣음
-      var fav = favPool[Math.floor(Math.random() * favPool.length)];
-      chosen = shuffle(chosen.slice(0, 3).concat([fav]));
+    var chosen;
+    if (currentCat === '랜덤') {
+      chosen = drawRandom(again ? lastShown : []);
+      if (chosen.length < 4 && again) chosen = drawRandom([]); // 남은 메뉴가 모자라면 방금 나온 메뉴도 다시 후보로
+    } else {
+      var fresh = again ? all.filter(function (n) { return lastShown.indexOf(n) < 0; }) : all;
+      var rest = all.filter(function (n) { return fresh.indexOf(n) < 0; });
+      chosen = shuffle(fresh).concat(shuffle(rest)).slice(0, 4);
     }
     lastShown = chosen;
     hint.textContent = '마음에 드는 메뉴를 눌러 고르세요.';
