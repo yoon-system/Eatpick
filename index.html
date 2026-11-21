@@ -40,6 +40,27 @@
   .other { display: block; margin-top: 14px; font-size: 13px; color: var(--sub); }
   .other-input { width: 100%; margin-top: 6px; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 16px; font-family: inherit; color: var(--ink); background: #fff; min-height: 48px; }
   .other-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .picks { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .picks li { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px; text-align: center; font-size: 15px; }
+  .picks .emoji { display: block; font-size: 28px; line-height: 1.3; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .btn { flex: 1 1 calc(50% - 8px); border-radius: 12px; padding: 12px 18px; font-size: 16px; font-weight: 700; font-family: inherit; min-height: 48px; cursor: pointer; }
+  .btn-ghost { border: 1.5px solid var(--accent); background: #fff; color: var(--accent); }
+  .btn-main { border: 1.5px solid var(--accent); background: var(--accent); color: #fff; }
+  details.stats { margin-top: 12px; }
+  details.stats summary { list-style: none; cursor: pointer; border: 1.5px solid var(--accent); color: var(--accent); background: #fff; border-radius: 12px; padding: 12px 18px; font-size: 16px; font-weight: 700; min-height: 48px; text-align: center; }
+  details.stats summary::-webkit-details-marker { display: none; }
+  .move { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; }
+  .move select { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 16px; font-family: inherit; background: #fff; min-height: 44px; }
+  .field { display: block; margin-top: 14px; font-size: 14px; font-weight: 600; }
+  .field select, .field input, .field textarea { display: block; width: 100%; margin-top: 6px; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 16px; font-family: inherit; font-weight: 400; color: var(--ink); background: #fff; min-height: 48px; }
+  .field textarea { min-height: 112px; resize: vertical; }
+  .field select:focus, .field input:focus, .field textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .form-msg { margin: 12px 0 0; font-size: 14px; min-height: 22px; }
+  .form-msg.ok { color: #1f7a3d; font-weight: 700; }
+  .form-msg.err { color: #b3261e; font-weight: 700; }
+  .btn:disabled { opacity: .6; cursor: default; }
   .badge { display: inline-block; font-size: 12px; font-weight: 700; color: var(--todo); background: var(--todo-bg); border-radius: 6px; padding: 2px 8px; margin-left: 6px; vertical-align: middle; }
   .result { background: var(--accent-soft); border-radius: 12px; padding: 14px 16px; margin-top: 12px; }
   .result strong { font-size: 18px; }
@@ -72,41 +93,126 @@
       <button class="chip" type="button">메뉴 D</button>
       <button class="chip" type="button">기타</button>
     </div>
-    <label class="other" for="other-menu">기타: 목록에 없는 메뉴는 직접 쓰세요</label>
-    <input id="other-menu" class="other-input" type="text" placeholder="먹은 메뉴를 직접 입력">
+    <label class="other" for="other-menu">기타: 목록에 없는 메뉴는 이름을 직접 쓰세요. 분야는 기타로 들어가고 나중에 바꿀 수 있어요</label>
+    <input id="other-menu" class="other-input" type="text" placeholder="먹은 메뉴를 직접 입력 (예: 마라탕)">
+    <p class="hint" style="margin-top:14px">언제 먹었나요? 고르지 않아도 됩니다. 건너뛰면 오늘로 기록합니다.</p>
+    <div class="chips" style="margin-top:6px">
+      <button class="chip" type="button">오늘</button>
+      <button class="chip" type="button">어제</button>
+      <button class="chip" type="button">그저께</button>
+    </div>
     <p class="hint" style="margin-top:12px">메뉴 A~D는 예시 값입니다.<span class="badge">나중에 연결</span></p>
   </section>
 
   <section aria-labelledby="s2">
     <h2 id="s2"><span class="num">2</span>오늘 땡기는 분야를 누르세요</h2>
     <div class="cats">
-      <button class="cat" type="button">건강식</button>
       <button class="cat" type="button">한식</button>
+      <button class="cat" type="button">양식</button>
       <button class="cat" type="button">일식</button>
       <button class="cat" type="button">중식</button>
-      <button class="cat" type="button">양식</button>
       <button class="cat" type="button">분식</button>
+      <button class="cat" type="button">기타</button>
     </div>
+    <p class="hint" style="margin-top:12px">기타는 내가 직접 추가한 메뉴에서 추천합니다.</p>
+    <details class="stats">
+      <summary>기타 메뉴 분야 바꾸기</summary>
+      <div class="move">
+        <span>마라탕 (예시)</span>
+        <select aria-label="마라탕의 분야">
+          <option>기타</option><option>한식</option><option>양식</option><option>일식</option><option>중식</option><option>분식</option>
+        </select>
+      </div>
+      <p class="hint" style="margin-top:8px">직접 추가한 메뉴는 처음에 기타에 들어갑니다. 아래는 예시 값입니다.<span class="badge">나중에 연결</span></p>
+    </details>
   </section>
 
   <section aria-labelledby="s3">
-    <h2 id="s3"><span class="num">3</span>먹은 메뉴를 뺀 저녁 메뉴를 추천합니다</h2>
+    <h2 id="s3"><span class="num">3</span>먹은 메뉴를 뺀 저녁 메뉴 4개를 추천합니다</h2>
     <div class="result">
       <strong>추천 메뉴 (예시)</strong><span class="badge">나중에 연결</span>
-      <p class="hint" style="margin-top:6px">분야별 추천 메뉴 목록이 연결되면 이 자리에 나옵니다.</p>
+      <p class="hint" style="margin-top:6px">분야별 추천 메뉴 목록이 연결되면 랜덤으로 4개가 나옵니다.</p>
+      <ul class="picks">
+        <li><span class="emoji">🍚</span>메뉴 A</li>
+        <li><span class="emoji">🍜</span>메뉴 B</li>
+        <li><span class="emoji">🥗</span>메뉴 C</li>
+        <li><span class="emoji">🍣</span>메뉴 D</li>
+      </ul>
     </div>
+    <div class="actions">
+      <button class="btn btn-ghost" type="button">다시 뽑기</button>
+      <button class="btn btn-main" type="button">이걸로 정했어요</button>
+    </div>
+    <p class="hint" style="margin-top:12px">원하는 메뉴가 없으면 다시 뽑습니다. 이전에 나온 메뉴가 더 마음에 들면 1번의 기타에 쓰고 선택하세요.</p>
   </section>
 
   <section aria-labelledby="s4">
     <h2 id="s4">내 취향 베스트 1~5위<span class="badge">나중에 연결</span></h2>
-    <p class="hint">추천받아 고른 메뉴의 횟수로 기억합니다. 아래는 예시 값입니다.</p>
-    <ol class="rank">
-      <li>메뉴 A (예시)</li>
-      <li>메뉴 B (예시)</li>
-      <li>메뉴 C (예시)</li>
-      <li>메뉴 D (예시)</li>
-      <li>메뉴 E (예시)</li>
-    </ol>
+    <p class="hint">먹은 메뉴의 횟수를 쌓아 두었다가, 누르면 베스트 1~5위를 보여 줍니다. 아래는 예시 값입니다.</p>
+    <details class="stats">
+      <summary>누적 보기</summary>
+      <ol class="rank">
+        <li>메뉴 A (예시)</li>
+        <li>메뉴 B (예시)</li>
+        <li>메뉴 C (예시)</li>
+        <li>메뉴 D (예시)</li>
+        <li>메뉴 E (예시)</li>
+      </ol>
+    </details>
+  </section>
+
+  <section aria-labelledby="s6">
+    <h2 id="s6">문의 남기기</h2>
+    <p class="hint">메뉴 추가 요청, 오류·불편 신고, 의견·후기를 남겨 주세요. 모든 칸은 비워 둬도 되지만 한 칸은 채워야 보낼 수 있어요. 답장은 드리지 않아요.</p>
+    <form id="inquiry-form" novalidate>
+      <label class="field">문의 종류
+        <select name="kind">
+          <option value="">선택 안 함</option>
+          <option value="메뉴 추가 요청">메뉴 추가 요청</option>
+          <option value="오류·불편 신고">오류·불편 신고</option>
+          <option value="의견·후기">의견·후기</option>
+        </select>
+      </label>
+      <label class="field">내용
+        <textarea name="message" maxlength="1000" placeholder="하고 싶은 말을 적어 주세요 (1000자까지)"></textarea>
+      </label>
+      <label class="field">메뉴 이름
+        <input name="menu_name" type="text" maxlength="50" placeholder="메뉴 추가 요청일 때 적어 주세요">
+      </label>
+      <label class="field">분야
+        <select name="category">
+          <option value="">선택 안 함</option>
+          <option value="한식">한식</option>
+          <option value="양식">양식</option>
+          <option value="일식">일식</option>
+          <option value="중식">중식</option>
+          <option value="분식">분식</option>
+          <option value="기타">기타</option>
+        </select>
+      </label>
+      <label class="field">쓰는 기기
+        <select name="device">
+          <option value="">선택 안 함</option>
+          <option value="폰">폰</option>
+          <option value="PC">PC</option>
+        </select>
+      </label>
+      <label class="field">만족도
+        <select name="rating">
+          <option value="">선택 안 함</option>
+          <option value="1">1점</option>
+          <option value="2">2점</option>
+          <option value="3">3점</option>
+          <option value="4">4점</option>
+          <option value="5">5점</option>
+        </select>
+      </label>
+      <div class="hp" aria-hidden="true">
+        <label>이 칸은 비워 두세요 <input name="website" type="text" tabindex="-1" autocomplete="off"></label>
+      </div>
+      <button id="inq-btn" class="btn btn-main" type="submit" style="width:100%;margin-top:16px">잇픽에 보내기</button>
+      <p id="inq-msg" class="form-msg" role="status" aria-live="polite"></p>
+    </form>
   </section>
 
   <section aria-labelledby="s5">
@@ -115,12 +221,80 @@
       <li><b>불편 한 줄</b>나는 저녁 메뉴를 정할 때, 최근에 먹지 않은 메뉴가 바로 떠오르지 않아서 불편하다.</li>
       <li><b>누가</b>혼자 살면서 요리를 잘 못하는 사람(요알못 나혼산)</li>
       <li><b>지금은 어떻게 버티나</b>머릿속 기억으로 고르고, 안 떠오르면 간단히 때운다.</li>
-      <li><b>이 페이지가 해 줄 한 가지</b>최근 며칠간 먹은 저녁 메뉴를 고르고 땡기는 분야(건강식·한식·일식·중식·양식·분식)를 누르면, 먹은 메뉴를 뺀 저녁 메뉴를 추천한다.</li>
+      <li><b>이 페이지가 해 줄 한 가지</b>최근 며칠간 먹은 저녁 메뉴를 고르고 땡기는 분야(한식·양식·일식·중식·분식·기타)를 누르면, 먹은 메뉴를 뺀 저녁 메뉴를 추천한다.</li>
       <li><b>필요한 것</b>저장 (추천받아 고른 메뉴의 횟수로 취향 베스트 1~5위 기억 + 분야별 추천 메뉴 목록)</li>
     </ul>
   </section>
 
-  <footer>저장 기능과 추천 목록은 다음 단계에서 연결합니다.</footer>
+  <footer>문의 폼은 연결되어 있고, 추천 목록과 먹은 메뉴 저장은 다음 단계에서 연결합니다.</footer>
 </main>
+<script>
+(function () {
+  var ENDPOINT = 'https://sfblawaqhebcucsdpzzc.supabase.co/rest/v1/inquiries';
+  var PUBLISHABLE_KEY = 'sb_publishable_h6MD_HXf5SCqTlpgPOgz_Q_95iuXAuk'; // 공개용 키 (secret/service_role 키는 넣지 말 것)
+  var form = document.getElementById('inquiry-form');
+  var btn = document.getElementById('inq-btn');
+  var msg = document.getElementById('inq-msg');
+  var sending = false;
+  var loadedAt = Date.now();
+  var DONE = '응답이 접수되었습니다. 의견 남겨주셔서 고마워요:)';
+
+  function show(text, kind) {
+    msg.textContent = text;
+    msg.className = 'form-msg' + (kind ? ' ' + kind : '');
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (sending) return;
+    var f = form.elements;
+    if (f.website.value) { // 사람이 볼 수 없는 칸이 채워졌으면 자동 입력 프로그램으로 보고 조용히 버림
+      form.reset();
+      show(DONE, 'ok');
+      return;
+    }
+    var payload = {};
+    if (f.kind.value) payload.kind = f.kind.value;
+    var message = f.message.value.trim();
+    if (message) payload.message = message;
+    var menu = f.menu_name.value.trim();
+    if (menu) payload.menu_name = menu;
+    if (f.category.value) payload.category = f.category.value;
+    if (f.device.value) payload.device = f.device.value;
+    if (f.rating.value) payload.rating = Number(f.rating.value);
+
+    if (Object.keys(payload).length === 0) {
+      show('한 칸 이상 입력해 주세요.', 'err');
+      return;
+    }
+    if (Date.now() - loadedAt < 3000) { // 페이지를 연 지 3초도 안 됐으면 자동 입력으로 보고 잠시 막음
+      show('잠시 후 다시 눌러 주세요.', 'err');
+      return;
+    }
+
+    sending = true;
+    btn.disabled = true;
+    show('보내는 중…', '');
+    fetch(ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': PUBLISHABLE_KEY,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(payload)
+    }).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      form.reset();
+      show(DONE, 'ok');
+    }).catch(function () {
+      show('보내지 못했어요. 잠시 후 다시 시도해 주세요.', 'err');
+    }).then(function () {
+      sending = false;
+      btn.disabled = false;
+    });
+  });
+})();
+</script>
 </body>
 </html>
