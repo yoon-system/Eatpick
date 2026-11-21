@@ -2,19 +2,20 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#fffaf0">
 <title>요알못 나혼산 · 저녁 메뉴 정하기</title>
 <style>
   :root {
-    --bg: #faf8f5;
+    --bg: #fffaf0;
     --card: #ffffff;
-    --ink: #1f1d1a;
-    --sub: #6b665f;
-    --line: #e8e3da;
-    --accent: #d9622b;
-    --accent-soft: #fbece3;
-    --todo: #8a6d00;
-    --todo-bg: #fff6d6;
+    --ink: #2b1d17;
+    --sub: #7a6a60;
+    --line: #ebdccb;
+    --accent: #d7342a;
+    --accent-soft: #fde6df;
+    --todo: #6b4a00;
+    --todo-bg: #ffe9a8;
   }
   * { box-sizing: border-box; }
   body {
@@ -24,8 +25,12 @@
     font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
     line-height: 1.6;
     -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: rgba(215, 52, 42, .15);
+    overflow-wrap: anywhere;
+    word-break: keep-all;
   }
-  main { max-width: 640px; margin: 0 auto; padding: 32px 20px 64px; }
+  button, input, select, textarea { touch-action: manipulation; }
+  main { max-width: 640px; margin: 0 auto; padding: 28px 20px calc(48px + env(safe-area-inset-bottom)); }
   .eyebrow { font-size: 14px; color: var(--accent); font-weight: 700; margin: 0 0 8px; }
   h1 { font-size: 26px; line-height: 1.35; margin: 0 0 12px; letter-spacing: -0.02em; }
   .lead { color: var(--sub); margin: 0 0 28px; font-size: 16px; }
@@ -33,10 +38,10 @@
   h2 { font-size: 15px; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
   .num { display: inline-flex; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 13px; align-items: center; justify-content: center; flex: none; }
   p { margin: 0 0 8px; }
-  .hint { font-size: 13px; color: var(--sub); }
+  .hint { font-size: 14px; color: var(--sub); }
   .chips, .cats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-  .chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 10px 16px; font-size: 15px; font-family: inherit; color: var(--ink); min-height: 44px; }
-  .cat { border: 1.5px solid var(--accent); background: #fff; color: var(--accent); border-radius: 12px; padding: 12px 18px; font-size: 16px; font-weight: 700; font-family: inherit; min-height: 48px; flex: 1 1 calc(50% - 8px); }
+  .chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 10px 16px; font-size: 15px; font-family: inherit; color: var(--ink); min-height: 48px; }
+  .cat { border: 1.5px solid var(--accent); background: #fff; color: var(--accent); border-radius: 12px; padding: 14px 18px; font-size: 17px; font-weight: 700; font-family: inherit; min-height: 54px; flex: 1 1 calc(50% - 8px); }
   .other { display: block; margin-top: 14px; font-size: 13px; color: var(--sub); }
   .other-input { width: 100%; margin-top: 6px; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 16px; font-family: inherit; color: var(--ink); background: #fff; min-height: 48px; }
   .other-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -44,23 +49,27 @@
   .picks li { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px; text-align: center; font-size: 15px; }
   .picks .emoji { display: block; font-size: 28px; line-height: 1.3; }
   .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-  .btn { flex: 1 1 calc(50% - 8px); border-radius: 12px; padding: 12px 18px; font-size: 16px; font-weight: 700; font-family: inherit; min-height: 48px; cursor: pointer; }
+  .btn { flex: 1 1 calc(50% - 8px); border-radius: 12px; padding: 14px 18px; font-size: 17px; font-weight: 700; font-family: inherit; min-height: 54px; cursor: pointer; }
   .btn-ghost { border: 1.5px solid var(--accent); background: #fff; color: var(--accent); }
   .btn-main { border: 1.5px solid var(--accent); background: var(--accent); color: #fff; }
   details.stats { margin-top: 12px; }
-  details.stats summary { list-style: none; cursor: pointer; border: 1.5px solid var(--accent); color: var(--accent); background: #fff; border-radius: 12px; padding: 12px 18px; font-size: 16px; font-weight: 700; min-height: 48px; text-align: center; }
+  details.stats summary { list-style: none; cursor: pointer; border: 1.5px solid var(--accent); color: var(--accent); background: #fff; border-radius: 12px; padding: 14px 18px; font-size: 17px; font-weight: 700; min-height: 54px; text-align: center; }
   details.stats summary::-webkit-details-marker { display: none; }
   .move { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; }
   .move select { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 16px; font-family: inherit; background: #fff; min-height: 44px; }
-  .field { display: block; margin-top: 14px; font-size: 14px; font-weight: 600; }
-  .field select, .field input, .field textarea { display: block; width: 100%; margin-top: 6px; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; font-size: 16px; font-family: inherit; font-weight: 400; color: var(--ink); background: #fff; min-height: 48px; }
+  .field { display: block; margin-top: 16px; font-size: 15px; font-weight: 600; }
+  .field select, .field input, .field textarea { display: block; width: 100%; margin-top: 6px; border: 1px solid var(--line); border-radius: 10px; padding: 14px 14px; font-size: 16px; font-family: inherit; font-weight: 400; color: var(--ink); background: #fff; min-height: 52px; }
   .field textarea { min-height: 112px; resize: vertical; }
   .field select:focus, .field input:focus, .field textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
-  .form-msg { margin: 12px 0 0; font-size: 14px; min-height: 22px; }
+  .form-msg { margin: 12px 0 0; font-size: 15px; min-height: 22px; }
   .form-msg.ok { color: #1f7a3d; font-weight: 700; }
   .form-msg.err { color: #b3261e; font-weight: 700; }
   .btn:disabled { opacity: .6; cursor: default; }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+  .meal-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .meal-chips .chip { padding: 12px 8px; font-size: 17px; min-height: 54px; border-radius: 14px; }
+  .sub-title { font-size: 15px; font-weight: 700; margin: 22px 0 6px; }
   [hidden] { display: none !important; }
   .badge { display: inline-block; font-size: 12px; font-weight: 700; color: var(--todo); background: var(--todo-bg); border-radius: 6px; padding: 2px 8px; margin-left: 6px; vertical-align: middle; }
   .result { background: var(--accent-soft); border-radius: 12px; padding: 14px 16px; margin-top: 12px; }
@@ -69,8 +78,14 @@
   ol.rank li { margin-bottom: 4px; }
   footer { text-align: center; font-size: 13px; color: var(--sub); margin-top: 24px; }
   @media (max-width: 420px) {
-    h1 { font-size: 23px; }
-    main { padding: 24px 16px 48px; }
+    h1 { font-size: 24px; }
+    main { padding: 20px 14px calc(40px + env(safe-area-inset-bottom)); }
+    section { padding: 18px 16px; border-radius: 14px; }
+    .cat { flex: 1 1 calc(50% - 8px); }
+  }
+  @media (max-width: 340px) {
+    .picks { grid-template-columns: 1fr; }
+    .btn { flex: 1 1 100%; }
   }
 </style>
 </head>
@@ -82,29 +97,30 @@
   <p class="lead">최근 메뉴를 적고, 랜덤으로 저녁 메뉴 추천받기</p>
 
   <section id="step1" class="step" aria-labelledby="s1">
-    <h2 id="s1"><span class="num">1</span>최근 며칠 먹은 메뉴를 적으세요</h2>
-    <p class="hint">기억나는 것만 적고 선택하세요. 기억 안 나면 비워 둬도 돼요. 고른 메뉴는 추천에서 빠집니다.</p>
-    <div class="chips">
-      <button class="chip" type="button">메뉴 A</button>
-      <button class="chip" type="button">메뉴 B</button>
-      <button class="chip" type="button">메뉴 C</button>
-      <button class="chip" type="button">메뉴 D</button>
-      <button class="chip" type="button">기타</button>
+    <h2 id="s1"><span class="num">1</span>오늘 어떤 식사를 고민하시나요?</h2>
+    <div class="chips meal-chips" id="meal-chips" role="group" aria-label="고민하는 식사" style="margin-top:0">
+      <button class="chip" type="button" data-meal="아침" aria-pressed="false">아침</button>
+      <button class="chip" type="button" data-meal="점심" aria-pressed="false">점심</button>
+      <button class="chip" type="button" data-meal="저녁" aria-pressed="true">저녁</button>
     </div>
-    <label class="other" for="other-menu">기타: 목록에 없는 메뉴는 이름을 직접 쓰세요. 분야는 기타로 들어가고 나중에 바꿀 수 있어요</label>
-    <input id="other-menu" class="other-input" type="text" placeholder="먹은 메뉴를 직접 입력 (예: 마라탕)">
-    <p class="hint" style="margin-top:14px">언제 먹었나요? 기억나면 골라 주세요. 건너뛰어도 됩니다.</p>
-    <div class="chips" style="margin-top:6px">
-      <button class="chip" type="button">오늘 점심</button>
-      <button class="chip" type="button">어제 저녁</button>
-      <button class="chip" type="button">어제 점심</button>
-    </div>
-    <p class="hint" style="margin-top:12px">메뉴 A~D는 예시 값입니다.<span class="badge">나중에 연결</span></p>
-    <button class="btn btn-main" type="button" data-go="1" style="width:100%;margin-top:12px">다음: 분야 고르기</button>
+
+    <p class="sub-title">최근 며칠간 먹은 메뉴를 고르세요</p>
+    <p class="hint">기억나는 것만 적어주세요. 입력 없이 다음으로 넘어가도 돼요.<br>적은 메뉴는 추천에서 제외됩니다.</p>
+    <label class="field"><span class="slot-label" data-slot="0">1. 오늘 점심</span>
+      <input type="text" maxlength="50" placeholder="먹은 메뉴 (예: 마라탕)" autocomplete="off" enterkeyhint="next">
+    </label>
+    <label class="field"><span class="slot-label" data-slot="1">2. 오늘 아침</span>
+      <input type="text" maxlength="50" placeholder="먹은 메뉴 (예: 마라탕)" autocomplete="off" enterkeyhint="next">
+    </label>
+    <label class="field"><span class="slot-label" data-slot="2">3. 어제 저녁</span>
+      <input type="text" maxlength="50" placeholder="먹은 메뉴 (예: 마라탕)" autocomplete="off" enterkeyhint="next">
+    </label>
+    <p class="hint" style="margin-top:12px">입력한 내용은 저장해서 지금까지 먹은 메뉴 1~5위로 정리해요.<span class="badge">나중에 연결</span></p>
+    <button id="next1" class="btn btn-main" type="button" data-go="1" style="width:100%;margin-top:12px">다음: 오늘의 메뉴 고르기로</button>
   </section>
 
   <section id="step2" class="step" aria-labelledby="s2" hidden>
-    <h2 id="s2"><span class="num">2</span>오늘 땡기는 분야를 누르세요</h2>
+    <h2 id="s2"><span class="num">2</span>지금 땡기는 분야를 누르세요</h2>
     <div class="cats">
       <button class="cat" type="button" data-go="2">한식</button>
       <button class="cat" type="button" data-go="2">양식</button>
@@ -122,13 +138,13 @@
           <option>기타</option><option>한식</option><option>양식</option><option>일식</option><option>중식</option><option>분식</option>
         </select>
       </div>
-      <p class="hint" style="margin-top:8px">직접 추가한 메뉴는 처음에 기타에 들어갑니다. 아래는 예시 값입니다.<span class="badge">나중에 연결</span></p>
+      <p class="hint" style="margin-top:8px">1번에 적은 메뉴 중 목록에 없는 메뉴는 처음에 기타에 들어갑니다. 아래는 예시 값입니다.<span class="badge">나중에 연결</span></p>
     </details>
     <button class="btn btn-ghost" type="button" data-go="0" style="width:100%;margin-top:12px">← 이전: 먹은 메뉴 적기</button>
   </section>
 
   <section id="step3" class="step" aria-labelledby="s3" hidden>
-    <h2 id="s3"><span class="num">3</span>먹은 메뉴를 뺀 저녁 메뉴 4개를 추천합니다</h2>
+    <h2 id="s3"><span class="num">3</span><span>먹은 메뉴를 뺀 <span class="meal-word">저녁</span> 메뉴 4개를 추천합니다</span></h2>
     <div class="result">
       <strong>추천 메뉴 (예시)</strong><span class="badge">나중에 연결</span>
       <p class="hint" style="margin-top:6px">분야별 추천 메뉴 목록이 연결되면 랜덤으로 4개가 나옵니다.</p>
@@ -143,15 +159,23 @@
       <button class="btn btn-ghost" type="button">다시 뽑기</button>
       <button class="btn btn-main" type="button">이걸로 정했어요</button>
     </div>
-    <p class="hint" style="margin-top:12px">원하는 메뉴가 없으면 다시 뽑습니다. 이전에 나온 메뉴가 더 마음에 들면 1번의 기타에 쓰고 선택하세요.</p>
+    <p class="hint" style="margin-top:12px">원하는 메뉴가 없으면 다시 뽑습니다.</p>
     <button class="btn btn-ghost" type="button" data-go="1" style="width:100%;margin-top:4px">← 분야 다시 고르기</button>
   </section>
 
+  <button id="open-more" class="btn btn-ghost" type="button" data-view="more" style="width:100%;margin-top:4px">누적 보기 · 문의 남기기</button>
+  <footer>문의 폼은 연결되어 있고, 추천 목록과 먹은 메뉴 저장은 다음 단계에서 연결합니다.</footer>
+</div>
+
+<div id="more-view" hidden>
+  <button class="btn btn-ghost" type="button" data-view="home" style="width:100%;margin-bottom:16px">← 돌아가기</button>
   <section aria-labelledby="s4">
-    <h2 id="s4">내 취향 베스트 1~5위<span class="badge">나중에 연결</span></h2>
-    <p class="hint">먹은 메뉴의 횟수를 쌓아 두었다가, 누르면 베스트 1~5위를 보여 줍니다. 아래는 예시 값입니다.</p>
+    <h2 id="s4">내 취향 누적 보기<span class="badge">나중에 연결</span></h2>
+    <p class="hint">아래는 예시 값입니다. 저장이 연결되면 실제 기록으로 채워집니다.</p>
     <details class="stats">
       <summary>누적 보기</summary>
+      <p class="sub-title">지금까지 먹은 메뉴 1~5위</p>
+      <p class="hint">1번에 입력한 메뉴를 저장해서 모은 순위예요.</p>
       <ol class="rank">
         <li>메뉴 A (예시)</li>
         <li>메뉴 B (예시)</li>
@@ -159,15 +183,18 @@
         <li>메뉴 D (예시)</li>
         <li>메뉴 E (예시)</li>
       </ol>
+      <p class="sub-title">추천받아 선택한 메뉴 1~5위</p>
+      <p class="hint">"이걸로 정했어요"로 고른 메뉴의 순위예요.</p>
+      <ol class="rank">
+        <li>메뉴 F (예시)</li>
+        <li>메뉴 G (예시)</li>
+        <li>메뉴 H (예시)</li>
+        <li>메뉴 I (예시)</li>
+        <li>메뉴 J (예시)</li>
+      </ol>
     </details>
   </section>
 
-  <button id="open-inquiry" class="btn btn-ghost" type="button" data-view="inquiry" style="width:100%;margin-top:4px">문의 남기기</button>
-  <footer>문의 폼은 연결되어 있고, 추천 목록과 먹은 메뉴 저장은 다음 단계에서 연결합니다.</footer>
-</div>
-
-<div id="inquiry-view" hidden>
-  <button class="btn btn-ghost" type="button" data-view="home" style="width:100%;margin-bottom:16px">← 돌아가기</button>
   <section aria-labelledby="s6">
     <h2 id="s6">문의 남기기</h2>
     <p class="hint">메뉴 추가 요청, 오류·불편 신고, 의견·후기를 남겨 주세요. 모든 칸은 비워 둬도 되지만 한 칸은 채워야 보낼 수 있어요. 답장은 드리지 않아요.</p>
@@ -232,11 +259,29 @@
     steps.forEach(function (el, i) { el.hidden = (i !== n); });
     window.scrollTo(0, 0);
   }
+  var MEALS = { // 고른 끼니 기준으로 직전 3끼
+    '아침': ['어제 저녁', '어제 점심', '어제 아침'],
+    '점심': ['오늘 아침', '어제 저녁', '어제 점심'],
+    '저녁': ['오늘 점심', '오늘 아침', '어제 저녁']
+  };
+  var mealBtns = document.querySelectorAll('[data-meal]');
+  function setMeal(meal) {
+    mealBtns.forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-meal') === meal)); });
+    document.querySelectorAll('.slot-label').forEach(function (el, i) {
+      el.textContent = (i + 1) + '. ' + MEALS[meal][i];
+      el.parentNode.querySelector('input').value = ''; // 끼니가 바뀌면 직전 3끼도 달라지므로 비움
+    });
+    document.querySelectorAll('.meal-word').forEach(function (el) { el.textContent = meal; });
+  }
+  mealBtns.forEach(function (b) {
+    b.addEventListener('click', function () { setMeal(b.getAttribute('data-meal')); });
+  });
+  setMeal('저녁');
   var home = document.getElementById('home');
-  var inquiry = document.getElementById('inquiry-view');
-  function showView(name) { // 첫 화면과 문의 화면 전환
+  var more = document.getElementById('more-view');
+  function showView(name) { // 첫 화면과 두 번째 페이지 전환
     home.hidden = (name !== 'home');
-    inquiry.hidden = (name !== 'inquiry');
+    more.hidden = (name !== 'more');
     window.scrollTo(0, 0);
   }
   document.querySelectorAll('[data-view]').forEach(function (b) {
