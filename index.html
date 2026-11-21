@@ -288,11 +288,12 @@
     <p class="form-msg" id="win-note" role="status" aria-live="polite"></p>
     <div class="stack">
       <button id="fav-btn" class="btn btn-main" type="button">♥ 최애 메뉴 등록하기</button>
-      <form id="fav-form" novalidate>
-        <label class="field" style="margin-top:0"><span>내 최애 메뉴 직접 등록</span>
+      <form id="fav-form" novalidate style="margin-top:22px;padding-top:20px;border-top:1px dashed var(--line)">
+        <label class="field" style="margin-top:0"><span>다른 최애 메뉴 등록하기</span>
           <input id="fav-name" type="text" maxlength="50" placeholder="예: 마라탕" autocomplete="off" enterkeyhint="done">
         </label>
-        <button id="fav-add" class="btn btn-ghost" type="submit" style="width:100%;margin-top:10px">♥ 최애 메뉴로 등록</button>
+        <p class="hint" id="fav-chance" style="margin:8px 0 0"></p>
+        <button id="fav-add" class="btn btn-ghost" type="submit" style="width:100%;margin-top:12px">등록</button>
         <p id="fav-msg" class="form-msg" role="status" aria-live="polite"></p>
       </form>
       <button id="addmenu-btn" class="btn btn-ghost" type="button" aria-expanded="false">＋ 메뉴 추가하기</button>
@@ -539,6 +540,16 @@
     }
     return miss + (a.length - i) + (b.length - j) <= 1;
   }
+  function sameName(typed) { // 띄어쓰기·대소문자를 무시하고 이름(또는 다른 표기)이 같은 메뉴를 찾음. 없으면 ''
+    var t = norm(typed), i, k, names;
+    for (i = 0; MENUS && i < MENUS.length; i++) {
+      if (norm(MENUS[i].name) === t) return MENUS[i].name;
+      for (k = 0; k < MENUS[i].aliases.length; k++) if (norm(MENUS[i].aliases[k]) === t) return MENUS[i].name;
+    }
+    names = Object.keys(customs);
+    for (i = 0; i < names.length; i++) if (norm(names[i]) === t) return names[i];
+    return '';
+  }
   function canon(typed) {
     if (!MENUS) return null;
     var t = norm(typed), i, k;
@@ -700,10 +711,16 @@
     favs.push(winner.name);
     lsSet('eatpick.favs', JSON.stringify(favs));
     $('fav-btn').textContent = '♥ 이미 최애 메뉴예요';
+    favHint();
     n.textContent = winner.name + josa(winner.name, '을', '를') + ' 최애 메뉴로 등록했어요. 누적 보기에서 볼 수 있어요.';
     n.className = 'form-msg ok';
   });
 
+  function favHint() { // 최애 메뉴가 뽑힐 확률 안내 (랜덤 추천 한 번 기준)
+    var n = favs.length;
+    $('fav-chance').textContent = '최애 메뉴가 뽑힐 확률: 약 16.7% (🎲 랜덤 추천 한 번 기준)' + (n ? ' · 최애 ' + n + '개 중 하나당 약 ' + (100 / 6 / n).toFixed(1) + '%' : '');
+  }
+  favHint();
   // 7-(1) 보조: 뽑힌 메뉴가 아니어도 최애 메뉴를 직접 등록
   $('fav-form').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -718,6 +735,7 @@
       lsSet('eatpick.favs', JSON.stringify(favs));
       $('fav-name').value = '';
       if (winner && winner.name === m.name) $('fav-btn').textContent = '♥ 이미 최애 메뉴예요';
+      favHint();
       say(m.name + josa(m.name, '을', '를') + ' 최애 메뉴로 등록했어요. (최애 ' + favs.length + '개)', 'ok');
     });
   });
@@ -735,8 +753,8 @@
     function say(t, kind) { msg.textContent = t; msg.className = 'form-msg' + (kind ? ' ' + kind : ''); }
     if (!name) { say('메뉴 이름을 적어 주세요.', 'err'); return; }
     menusP.then(function () {
-      var m = canon(name);
-      if (m) { say(m.name + josa(m.name, '은', '는') + ' 이미 ' + m.category + ' 목록에 있어요.', 'err'); return; }
+      var dup = sameName(name); // 이름만 비교: 분야가 달라도 같은 이름이면 추가하지 않음
+      if (dup) { say('같은 메뉴가 있습니다. (' + dup + ')', 'err'); return; }
       customs[name] = cat;
       lsSet('eatpick.customs', JSON.stringify(customs));
       $('am-name').value = '';
