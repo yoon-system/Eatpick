@@ -641,10 +641,13 @@
   });
 
   // 2~3단계: 추천 4개 뽑기
-  // 랜덤 추천: 한식·양식·일식·중식·분식·최애 6칸이 똑같이 1/6(16.7%)씩.
-  // 추천 한 번에 최애 메뉴가 끼어들 확률은 1/6이고, 최애가 1개든 10개든 같고, 최애끼리는 똑같은 확률이에요.
-  // 최애 메뉴는 분야 칸에서는 빼서 따로 세므로, 분야로 한 번 더 뽑히는 일은 없어요.
-  var FAV_SIXTH = 1 / 6;
+  // 랜덤 추천 때 최애 메뉴가 끼어들 확률 (추천 한 번 기준):
+  //   P(n) = (1/6) × n / (n + K),  n = 등록한 최애 개수.  1개일 때 8%, 개수가 늘수록 커지지만 1/6(16.67%)을 넘지 않음.
+  //   '최애 개수만큼 응모권을 늘리는 추첨'에서 나오는 모양이라, 늘어날수록 증가폭이 부드럽게 줄어듦.
+  //   최애가 여러 개면 그중 하나는 똑같은 확률로 뽑히고, 메뉴 하나당 확률은 P(n) ÷ n.
+  var FAV_MAX = 1 / 6, FAV_AT_ONE = 0.08, FAV_K = FAV_MAX / FAV_AT_ONE - 1;
+  function favChance(n) { return n < 1 ? 0 : FAV_MAX * n / (n + FAV_K); }
+  window.__favChance = favChance;
   function drawBalanced(n, exclude) { // 5개 분야에서 똑같은 확률로 n개 (같은 메뉴는 한 번만)
     var b = { '한식': [], '양식': [], '일식': [], '중식': [], '분식': [] };
     pool('랜덤').forEach(function (m) {
@@ -662,7 +665,7 @@
   }
   function drawRandom(exclude) {
     var favOk = pool('랜덤').filter(function (m) { return favs.indexOf(m) >= 0 && exclude.indexOf(m) < 0; });
-    if (favOk.length && Math.random() < FAV_SIXTH) {
+    if (favOk.length && Math.random() < favChance(favOk.length)) {
       var fav = favOk[Math.floor(Math.random() * favOk.length)];
       return shuffle([fav].concat(drawBalanced(3, exclude)));
     }
@@ -820,7 +823,7 @@
   });
   function favHint() { // 최애 메뉴가 뽑힐 확률 안내 (랜덤 추천 한 번 기준)
     var n = favs.length;
-    $('fav-chance').textContent = '최애 메뉴가 뽑힐 확률: 약 16.7% (🎲 랜덤 추천 한 번 기준)' + (n ? ' · 최애 ' + n + '개 중 하나당 약 ' + (100 / 6 / n).toFixed(1) + '%' : '');
+    $('fav-chance').textContent = '최애 메뉴가 뽑힐 확률 (🎲 랜덤 추천 한 번 기준): ' + (n ? '지금 최애 ' + n + '개 → 약 ' + (favChance(n) * 100).toFixed(1) + '% (메뉴 하나당 약 ' + (favChance(n) * 100 / n).toFixed(1) + '%)' : '1개면 8%, 많이 등록할수록 올라가고 최대 16.7%') + (n ? ' · 최대 16.7%' : '');
   }
   favHint();
   window.__afterMeal(window.__mealNow || '저녁');
