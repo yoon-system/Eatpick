@@ -823,7 +823,7 @@
   });
   function favHint() { // 최애 메뉴가 뽑힐 확률 안내 (랜덤 추천 한 번 기준)
     var n = favs.length;
-    $('fav-chance').textContent = '최애 메뉴가 뽑힐 확률 (🎲 랜덤 추천 한 번 기준): ' + (n ? '지금 최애 ' + n + '개 → 약 ' + (favChance(n) * 100).toFixed(1) + '% (메뉴 하나당 약 ' + (favChance(n) * 100 / n).toFixed(1) + '%)' : '1개면 8%, 많이 등록할수록 올라가고 최대 16.7%') + (n ? ' · 최대 16.7%' : '');
+    $('fav-chance').textContent = '최애 메뉴가 뽑힐 확률 (🎲 랜덤 추천 한 번 기준): ' + (n ? '지금 최애 ' + n + '개 → 약 ' + (favChance(n) * 100).toFixed(1) + '%' + (n > 1 ? ' (메뉴 하나당 약 ' + (favChance(n) * 100 / n).toFixed(1) + '%)' : '') : '1개면 8%, 많이 등록할수록 올라가고 최대 16.7%') + (n ? ' · 최대 16.7%' : '');
   }
   favHint();
   window.__afterMeal(window.__mealNow || '저녁');
