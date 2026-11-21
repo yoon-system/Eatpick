@@ -357,20 +357,6 @@
       <label class="field">내용
         <textarea name="message" maxlength="1000" placeholder="하고 싶은 말을 적어 주세요 (1000자까지)"></textarea>
       </label>
-      <label class="field">메뉴 이름
-        <input name="menu_name" type="text" maxlength="50" placeholder="메뉴 추가 요청일 때 적어 주세요">
-      </label>
-      <label class="field">분야
-        <select name="category">
-          <option value="">선택 안 함</option>
-          <option value="한식">한식</option>
-          <option value="양식">양식</option>
-          <option value="일식">일식</option>
-          <option value="중식">중식</option>
-          <option value="분식">분식</option>
-          <option value="기타">기타</option>
-        </select>
-      </label>
       <label class="field">쓰는 기기
         <select name="device">
           <option value="">선택 안 함</option>
@@ -847,9 +833,6 @@
     if (f.kind.value) payload.kind = f.kind.value;
     var message = f.message.value.trim();
     if (message) payload.message = message;
-    var menu = f.menu_name.value.trim();
-    if (menu) payload.menu_name = menu;
-    if (f.category.value) payload.category = f.category.value;
     if (f.device.value) payload.device = f.device.value;
     if (f.rating.value) payload.rating = Number(f.rating.value);
 
