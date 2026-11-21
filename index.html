@@ -872,9 +872,11 @@
     var ate = choice === 'yes';
     var row = { device_id: did, menu_name: current.name, category: current.category, ate: ate };
     if (ate) row.rating = stars;
-    var jobs = [insert('feedback', [row])];
-    if (ate) jobs.push(insert('meals', [{ device_id: did, menu_name: current.name, category: current.category, source: 'pick' }])); // 먹었다고 확인된 선택만 순위에 들어감
-    return Promise.all(jobs);
+    var item = current;
+    return insert('feedback', [row]).then(function () {
+      // 먹었다(YES)+별점까지 남긴 선택만 순위에 들어감. 순위 기록은 맨 마지막에 한 번만 넣어서, 중간에 실패해 다시 눌러도 두 번 세지 않음
+      if (ate) return insert('meals', [{ device_id: did, menu_name: item.name, category: item.category, source: 'pick' }]);
+    });
   }
   $('fb-yes').addEventListener('click', function () { choice = 'yes'; fbSay(''); fbRender(); });
   $('fb-no').addEventListener('click', function () { choice = 'no'; stars = 0; fbSay(''); fbRender(); });
