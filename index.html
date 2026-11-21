@@ -104,6 +104,9 @@
   .result strong { font-size: 18px; }
   .picks { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .picks li { background: #fff; border: 1.5px solid var(--line); border-radius: 14px; padding: 12px; text-align: center; font-size: 15px; transition: transform .15s ease; }
+  .picks li { padding: 0; }
+  .picks li.sel { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 2px var(--accent); }
+  .pickbtn { display: block; width: 100%; min-height: 78px; border: 0; background: transparent; font: inherit; color: inherit; padding: 12px; border-radius: 12px; cursor: pointer; }
   .picks .emoji { display: block; font-size: 30px; line-height: 1.3; }
 
   /* 접기 영역, 순위 */
@@ -112,6 +115,8 @@
   details.stats summary::-webkit-details-marker { display: none; }
   details.stats[open] summary { background: var(--accent-soft); }
   details.stats[open] > *:not(summary) { animation: rise .35s ease both; }
+  .rank-empty { color: var(--sub); font-size: 14px; list-style: none; margin-left: -22px; }
+  .group-title { font-size: 15px; font-weight: 700; margin: 20px 0 0; padding: 6px 12px; background: var(--accent-soft); border-radius: 10px; }
   .move { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 12px; }
   .move select { border: 1.5px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 16px; font-family: inherit; background: #fff; min-height: 44px; }
   ol.rank { margin: 12px 0 0; padding-left: 22px; }
@@ -197,7 +202,7 @@
     <label class="field"><span class="slot-label" data-slot="2">3. 어제 저녁</span>
       <input type="text" maxlength="50" placeholder="먹은 메뉴 (예: 마라탕)" autocomplete="off" enterkeyhint="next">
     </label>
-    <p class="hint" style="margin-top:12px">입력한 내용은 저장해서 지금까지 먹은 메뉴 1~5위로 정리해요.<span class="badge">나중에 연결</span></p>
+    <p class="hint" style="margin-top:12px">입력한 내용은 이 기기 기록으로 저장해서 지금까지 먹은 메뉴 1~5위로 정리해요.</p>
     <button id="next1" class="btn btn-main" type="button" data-go="1" style="width:100%;margin-top:12px">다음: 오늘의 메뉴 고르기로</button>
   </section>
 
@@ -215,13 +220,8 @@
     <p class="hint" style="margin-top:12px">기타는 내가 직접 추가한 메뉴에서 추천합니다.</p>
     <details class="stats">
       <summary>기타 메뉴 분야 바꾸기</summary>
-      <div class="move">
-        <span>마라탕 (예시)</span>
-        <select aria-label="마라탕의 분야">
-          <option>기타</option><option>한식</option><option>양식</option><option>일식</option><option>중식</option><option>분식</option>
-        </select>
-      </div>
-      <p class="hint" style="margin-top:8px">1번에 적은 메뉴 중 목록에 없는 메뉴는 처음에 기타에 들어갑니다. 아래는 예시 값입니다.<span class="badge">나중에 연결</span></p>
+      <div id="custom-list"><p class="hint" style="margin-top:12px">1번에 적은 메뉴 중 목록에 없는 메뉴가 여기에 나타나요.</p></div>
+      <p class="hint" style="margin-top:8px">처음에는 기타에 들어가고, 분야를 바꾸면 그 분야에서 추천돼요.</p>
     </details>
     <button class="btn btn-ghost" type="button" data-go="0" style="width:100%;margin-top:12px">← 이전: 먹은 메뉴 적기</button>
   </section>
@@ -230,17 +230,12 @@
     <span class="peek" data-chr="avocado" aria-hidden="true"></span>
     <h2 id="s3"><span class="num">3</span><span>먹은 메뉴를 뺀 <span class="meal-word">저녁</span> 메뉴 4개를 추천합니다</span></h2>
     <div class="result">
-      <strong>추천 메뉴 (예시)</strong><span class="badge">나중에 연결</span>
-      <p class="hint" style="margin-top:6px">분야별 추천 메뉴 목록이 연결되면 랜덤으로 4개가 나옵니다.</p>
-      <ul class="picks">
-        <li><span class="emoji">🍚</span>메뉴 A</li>
-        <li><span class="emoji">🍜</span>메뉴 B</li>
-        <li><span class="emoji">🥗</span>메뉴 C</li>
-        <li><span class="emoji">🍣</span>메뉴 D</li>
-      </ul>
+      <strong>추천 메뉴</strong>
+      <p class="hint" id="pick-hint" style="margin-top:6px" aria-live="polite">마음에 드는 메뉴를 눌러 고르세요.</p>
+      <ul class="picks" id="pick-list"></ul>
     </div>
     <div class="actions">
-      <button class="btn btn-ghost" type="button">다시 뽑기</button>
+      <button id="reroll" class="btn btn-ghost" type="button">다시 뽑기</button>
       <button id="pick-btn" class="btn btn-main" type="button">이걸로 정했어요</button>
     </div>
     <p class="hint" style="margin-top:12px">원하는 메뉴가 없으면 다시 뽑습니다.</p>
@@ -248,35 +243,28 @@
   </section>
 
   <button id="open-more" class="btn btn-ghost" type="button" data-view="more" style="width:100%;margin-top:4px">누적 보기 · 문의 남기기</button>
-  <footer>문의 폼은 연결되어 있고, 추천 목록과 먹은 메뉴 저장은 다음 단계에서 연결합니다.</footer>
+  <footer>메뉴 추천, 기록 저장, 문의 폼이 모두 연결되어 있어요. 기록은 이 기기를 기준으로 쌓입니다.</footer>
 </div>
 
 <div id="more-view" hidden>
   <button class="btn btn-ghost" type="button" data-view="home" style="width:100%;margin-bottom:16px">← 돌아가기</button>
   <section class="has-peek tint-toast" aria-labelledby="s4">
     <span class="peek" data-chr="toast" aria-hidden="true"></span>
-    <h2 id="s4">내 취향 누적 보기<span class="badge">나중에 연결</span></h2>
-    <p class="hint">아래는 예시 값입니다. 저장이 연결되면 실제 기록으로 채워집니다.</p>
-    <details class="stats">
-      <summary>누적 보기</summary>
+    <h2 id="s4">누적 보기</h2>
+    <p class="hint">내 기기에서 쌓은 기록과, 모든 방문자의 기록을 합산한 순위를 따로 보여줘요.</p>
+    <details class="stats" id="rank-details" open>
+      <summary>순위 보기</summary>
+      <p class="group-title">내 기기 기록</p>
       <p class="sub-title">지금까지 먹은 메뉴 1~5위</p>
-      <p class="hint">1번에 입력한 메뉴를 저장해서 모은 순위예요.</p>
-      <ol class="rank">
-        <li>메뉴 A (예시)</li>
-        <li>메뉴 B (예시)</li>
-        <li>메뉴 C (예시)</li>
-        <li>메뉴 D (예시)</li>
-        <li>메뉴 E (예시)</li>
-      </ol>
+      <ol class="rank" id="rank-my-input"><li class="rank-empty">불러오는 중…</li></ol>
       <p class="sub-title">추천받아 선택한 메뉴 1~5위</p>
-      <p class="hint">"이걸로 정했어요"로 고른 메뉴의 순위예요.</p>
-      <ol class="rank">
-        <li>메뉴 F (예시)</li>
-        <li>메뉴 G (예시)</li>
-        <li>메뉴 H (예시)</li>
-        <li>메뉴 I (예시)</li>
-        <li>메뉴 J (예시)</li>
-      </ol>
+      <ol class="rank" id="rank-my-pick"><li class="rank-empty">불러오는 중…</li></ol>
+      <p class="group-title">모두의 기록 (합산)</p>
+      <p class="sub-title">지금까지 먹은 메뉴 1~5위</p>
+      <ol class="rank" id="rank-all-input"><li class="rank-empty">불러오는 중…</li></ol>
+      <p class="sub-title">추천받아 선택한 메뉴 1~5위</p>
+      <ol class="rank" id="rank-all-pick"><li class="rank-empty">불러오는 중…</li></ol>
+      <p class="hint" style="margin-top:14px">내 기기 기록은 이 브라우저를 기준으로 모여요. 폰과 PC는 따로 쌓이고, 브라우저 데이터를 지우면 내 기록은 새로 시작해요.</p>
     </details>
   </section>
 
@@ -384,7 +372,7 @@
   });
   var pick = document.getElementById('pick-btn');
   var EMOJI = ['🍳', '🍅', '🥑', '🍞', '☕', '✨'];
-  pick.addEventListener('click', function () { // 장식용 효과: 이모지가 터져 나옴 (선택 동작은 아직 연결 전)
+  window.__burst = function () { // 장식용 효과: 이모지가 터져 나옴
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     var r = pick.getBoundingClientRect();
     for (var i = 0; i < 10; i++) {
@@ -399,7 +387,7 @@
       el.addEventListener('animationend', function (e) { e.target.remove(); });
       document.body.appendChild(el);
     }
-  });
+  };
   setMeal('저녁');
   var home = document.getElementById('home');
   var more = document.getElementById('more-view');
@@ -414,6 +402,198 @@
   document.querySelectorAll('[data-go]').forEach(function (b) {
     b.addEventListener('click', function () { go(Number(b.getAttribute('data-go'))); });
   });
+})();
+</script>
+<script>
+(function () {
+  var BASE = 'https://sfblawaqhebcucsdpzzc.supabase.co/rest/v1';
+  var KEY = 'sb_publishable_h6MD_HXf5SCqTlpgPOgz_Q_95iuXAuk'; // 공개용 키 (secret/service_role 키는 넣지 말 것)
+  var $ = function (id) { return document.getElementById(id); };
+  var EMOJI = { '한식': '🍚', '양식': '🍝', '일식': '🍣', '중식': '🥟', '분식': '🍢', '기타': '🍽️' };
+
+  function api(path, opt) {
+    opt = opt || {};
+    var h = { apikey: KEY };
+    if (opt.body) h['Content-Type'] = 'application/json';
+    if (opt.prefer) h.Prefer = opt.prefer;
+    return fetch(BASE + path, { method: opt.method || 'GET', headers: h, body: opt.body }).then(function (r) {
+      if (!r.ok) throw new Error('http ' + r.status);
+      return opt.prefer === 'return=minimal' ? null : r.json();
+    });
+  }
+
+  // 브라우저 저장소 (막혀 있으면 이 화면을 여는 동안만 기억)
+  var mem = {};
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return mem[k] || null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { mem[k] = v; } }
+
+  var did = lsGet('eatpick.device');
+  if (!did) {
+    did = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('d' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12));
+    lsSet('eatpick.device', did);
+  }
+  var customs = {};
+  try { customs = JSON.parse(lsGet('eatpick.customs') || '{}') || {}; } catch (e) { customs = {}; }
+  function saveCustoms() { lsSet('eatpick.customs', JSON.stringify(customs)); }
+
+  var MENUS = null;
+  var menusP = api('/menus?select=category,name,aliases').then(function (m) { MENUS = m; return m; }).catch(function () { return null; });
+
+  // 띄어쓰기와 대소문자를 무시하고, 별칭과 한 글자 오타까지 같은 메뉴로 봄
+  function norm(x) { return String(x).replace(/\s+/g, '').toLowerCase(); }
+  function within1(a, b) {
+    if (a === b) return true;
+    if (Math.abs(a.length - b.length) > 1) return false;
+    var i = 0, j = 0, miss = 0;
+    while (i < a.length && j < b.length) {
+      if (a[i] === b[j]) { i++; j++; continue; }
+      if (++miss > 1) return false;
+      if (a.length > b.length) i++; else if (a.length < b.length) j++; else { i++; j++; }
+    }
+    return miss + (a.length - i) + (b.length - j) <= 1;
+  }
+  function canon(typed) {
+    if (!MENUS) return null;
+    var t = norm(typed), i, k;
+    for (i = 0; i < MENUS.length; i++) {
+      if (norm(MENUS[i].name) === t) return MENUS[i];
+      for (k = 0; k < MENUS[i].aliases.length; k++) if (norm(MENUS[i].aliases[k]) === t) return MENUS[i];
+    }
+    if (t.length < 3) return null;
+    var hits = MENUS.filter(function (m) { return within1(norm(m.name), t); });
+    return hits.length === 1 ? hits[0] : null;
+  }
+
+  // 1단계: 적은 메뉴 저장
+  var recent = [];
+  var lastSaved = {};
+  document.querySelectorAll('[data-meal]').forEach(function (b) { b.addEventListener('click', function () { lastSaved = {}; }); });
+  $('next1').addEventListener('click', function () {
+    var typed = [];
+    document.querySelectorAll('#step1 input').forEach(function (inp, idx) {
+      var v = inp.value.trim();
+      if (v) typed.push({ idx: idx, v: v });
+    });
+    menusP.then(function () {
+      recent = [];
+      var rows = [];
+      typed.forEach(function (t) {
+        var m = canon(t.v);
+        var name = m ? m.name : t.v;
+        var cat = m ? m.category : (customs[name] || '기타');
+        if (!m && !customs[name]) { customs[name] = '기타'; }
+        if (recent.indexOf(name) < 0) recent.push(name);
+        if (lastSaved[t.idx] !== name) {
+          lastSaved[t.idx] = name;
+          rows.push({ device_id: did, menu_name: name, category: cat, source: 'input' });
+        }
+      });
+      saveCustoms();
+      renderCustoms();
+      if (rows.length) api('/meals', { method: 'POST', body: JSON.stringify(rows), prefer: 'return=minimal' }).catch(function () {});
+    });
+  });
+
+  // 2단계: 기타 메뉴의 분야 바꾸기
+  var CATS = ['기타', '한식', '양식', '일식', '중식', '분식'];
+  function renderCustoms() {
+    var box = $('custom-list');
+    var names = Object.keys(customs);
+    box.textContent = '';
+    if (!names.length) {
+      var p = document.createElement('p');
+      p.className = 'hint'; p.style.marginTop = '12px';
+      p.textContent = '1번에 적은 메뉴 중 목록에 없는 메뉴가 여기에 나타나요.';
+      box.appendChild(p);
+      return;
+    }
+    names.forEach(function (name) {
+      var row = document.createElement('div'); row.className = 'move';
+      var label = document.createElement('span'); label.textContent = name;
+      var sel = document.createElement('select'); sel.setAttribute('aria-label', name + '의 분야');
+      CATS.forEach(function (c) { var o = document.createElement('option'); o.textContent = c; if (customs[name] === c) o.selected = true; sel.appendChild(o); });
+      sel.addEventListener('change', function () { customs[name] = sel.value; saveCustoms(); });
+      row.appendChild(label); row.appendChild(sel); box.appendChild(row);
+    });
+  }
+  renderCustoms();
+
+  // 3단계: 추천 4개 뽑기
+  var currentCat = '';
+  var lastShown = [];
+  var picked = false;
+  function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function pool(cat) {
+    var list = (MENUS || []).filter(function (m) { return m.category === cat; }).map(function (m) { return m.name; });
+    Object.keys(customs).forEach(function (n) { if (customs[n] === cat && list.indexOf(n) < 0) list.push(n); });
+    return list.filter(function (n) { return recent.indexOf(n) < 0; });
+  }
+  function renderPicks(again) {
+    var ul = $('pick-list'), hint = $('pick-hint');
+    ul.textContent = '';
+    picked = false;
+    $('pick-btn').disabled = false;
+    if (!MENUS) { hint.textContent = '메뉴를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.'; return; }
+    var all = pool(currentCat);
+    if (!all.length) { hint.textContent = currentCat + ' 분야에는 추천할 메뉴가 없어요. 다른 분야를 골라 보세요.'; lastShown = []; return; }
+    var fresh = again ? all.filter(function (n) { return lastShown.indexOf(n) < 0; }) : all;
+    var rest = all.filter(function (n) { return fresh.indexOf(n) < 0; });
+    var chosen = shuffle(fresh).concat(shuffle(rest)).slice(0, 4);
+    lastShown = chosen;
+    hint.textContent = '마음에 드는 메뉴를 눌러 고르세요.';
+    chosen.forEach(function (name) {
+      var li = document.createElement('li');
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'pickbtn'; b.setAttribute('data-name', name); b.setAttribute('aria-pressed', 'false');
+      var em = document.createElement('span'); em.className = 'emoji'; em.textContent = EMOJI[currentCat] || '🍽️';
+      b.appendChild(em); b.appendChild(document.createTextNode(name));
+      b.addEventListener('click', function () {
+        if (picked) return;
+        ul.querySelectorAll('li').forEach(function (x) { x.classList.remove('sel'); x.firstChild.setAttribute('aria-pressed', 'false'); });
+        li.classList.add('sel'); b.setAttribute('aria-pressed', 'true');
+        $('pick-hint').textContent = "'" + name + "'로 정하려면 아래 버튼을 눌러 주세요.";
+      });
+      li.appendChild(b); ul.appendChild(li);
+    });
+  }
+  document.querySelectorAll('#step2 .cat').forEach(function (b) {
+    b.addEventListener('click', function () {
+      currentCat = b.textContent.trim();
+      lastShown = [];
+      menusP.then(function () { renderPicks(false); });
+    });
+  });
+  $('reroll').addEventListener('click', function () { renderPicks(true); });
+  $('pick-btn').addEventListener('click', function () {
+    if (picked) return;
+    var sel = $('pick-list').querySelector('li.sel');
+    if (!sel) { $('pick-hint').textContent = '먹을 메뉴를 하나 눌러 주세요.'; return; }
+    var name = sel.firstChild.getAttribute('data-name');
+    picked = true;
+    $('pick-btn').disabled = true;
+    if (window.__burst) window.__burst();
+    $('pick-hint').textContent = "'" + name + "'로 정했어요! 맛있게 드세요. 누적 보기에서 순위를 볼 수 있어요.";
+    api('/meals', { method: 'POST', body: JSON.stringify([{ device_id: did, menu_name: name, category: currentCat, source: 'pick' }]), prefer: 'return=minimal' }).catch(function () {
+      $('pick-hint').textContent = "'" + name + "'로 정했어요! 다만 기록을 저장하지 못했어요.";
+    });
+  });
+
+  // 누적 보기: 내 기기 / 전체 합산
+  function fill(id, rows) {
+    var ol = $(id); ol.textContent = '';
+    if (!rows) { var e = document.createElement('li'); e.className = 'rank-empty'; e.textContent = '불러오지 못했어요.'; ol.appendChild(e); return; }
+    if (!rows.length) { var z = document.createElement('li'); z.className = 'rank-empty'; z.textContent = '아직 기록이 없어요.'; ol.appendChild(z); return; }
+    rows.forEach(function (r) { var li = document.createElement('li'); li.textContent = r.menu_name + ' (' + r.cnt + '회)'; ol.appendChild(li); });
+  }
+  function rank(id, source, mine) {
+    var body = { p_source: source, p_limit: 5 };
+    if (mine) body.p_device = did;
+    api('/rpc/top_meals', { method: 'POST', body: JSON.stringify(body) }).then(function (r) { fill(id, r); }).catch(function () { fill(id, null); });
+  }
+  function loadRanks() {
+    rank('rank-my-input', 'input', true); rank('rank-my-pick', 'pick', true);
+    rank('rank-all-input', 'input', false); rank('rank-all-pick', 'pick', false);
+  }
+  $('open-more').addEventListener('click', loadRanks);
 })();
 </script>
 <script>
