@@ -351,7 +351,7 @@
       <p class="hint" style="margin:0 0 10px"><b>이 코드의 기록을 찾았어요.</b> 지금 이 기기의 기록과 어떻게 할까요?</p>
       <button class="btn btn-main" id="code-merge" type="button" style="width:100%">합치기</button>
       <p class="hint" style="margin:6px 0 12px">이 기기의 최애·추가 메뉴와 먹은 메뉴·별점 기록을 그 코드에 더해요. 기존 기록은 그대로 남아요.</p>
-      <button class="btn btn-ghost" id="code-over" type="button" style="width:100%">덮어쓰기</button>
+      <button class="btn btn-ghost" id="code-over" type="button" style="width:100%">변경하기 (덮어쓰기)</button>
       <p class="hint" style="margin:6px 0 0">이 기기의 최애·추가 메뉴를 지우고 그 코드의 것으로 바꿔요. 이 기기에서 쌓은 먹은 메뉴·별점 기록은 현재 코드에 남아 있지만 불러온 코드에서는 보이지 않아요.</p>
     </div>
     <p id="code-msg" class="form-msg" role="status" aria-live="polite"></p>
@@ -571,7 +571,8 @@
   function pushProfile() {
     return api('/rpc/save_profile', { method: 'POST', body: JSON.stringify({ p_code: did, p_data: { favs: favs, customs: customs } }), prefer: 'return=minimal' });
   }
-  function syncProfile() { clearTimeout(syncT); syncT = setTimeout(function () { pushProfile().catch(function () {}); }, 600); }
+  var edits = 0;
+  function syncProfile() { edits++; clearTimeout(syncT); syncT = setTimeout(function () { pushProfile().catch(function () {}); }, 600); }
   function josa(w, a, b) { // 받침이 있으면 a, 없으면 b (은/는, 을/를)
     var c = String(w).charCodeAt(String(w).length - 1);
     return (c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28) ? a : b;
@@ -973,7 +974,25 @@
   var codeEl = $('my-code'), codeMsg = $('code-msg');
   function codeNote(t, k) { codeMsg.textContent = t; codeMsg.className = 'form-msg' + (k ? ' ' + k : ''); }
   codeEl.textContent = did;
-  pushProfile().catch(function () {}); // 코드를 서버에 등록해 두면 다른 기기에서 바로 불러올 수 있음
+  // 같은 코드를 쓰는 모든 기기가 같은 최애·추가 메뉴를 보도록, 열 때와 다시 돌아왔을 때 서버 값을 받아옴 (서버에 아직 없으면 이 기기 값을 올림)
+  function applyProfile(d) {
+    if (Array.isArray(d.favs)) { favs.length = 0; d.favs.forEach(function (n) { if (typeof n === 'string') favs.push(n); }); }
+    if (d.customs && typeof d.customs === 'object') {
+      Object.keys(customs).forEach(function (n) { delete customs[n]; });
+      Object.keys(d.customs).forEach(function (n) { if (CATS.indexOf(d.customs[n]) >= 0) customs[n] = d.customs[n]; });
+    }
+    lsSet('eatpick.favs', JSON.stringify(favs)); lsSet('eatpick.customs', JSON.stringify(customs));
+    favHint(); renderFavEdit(); syncFavBtn();
+  }
+  function pullProfile() {
+    var at = edits;
+    return api('/rpc/load_profile', { method: 'POST', body: JSON.stringify({ p_code: did }) }).then(function (d) {
+      if (edits !== at) return;            // 받아오는 사이 이 기기에서 바꿨으면 이 기기 값이 우선
+      if (d) applyProfile(d); else return pushProfile();
+    }).catch(function () {});
+  }
+  pullProfile();
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') pullProfile(); });
   $('code-copy').addEventListener('click', function () {
     function ok() { codeNote('코드를 복사했어요.', 'ok'); }
     function manual() { codeNote('길게 눌러 직접 복사해 주세요: ' + did, ''); }
