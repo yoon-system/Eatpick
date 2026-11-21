@@ -347,8 +347,14 @@
       <input id="code-in" type="text" maxlength="20" placeholder="EP-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false">
     </label>
     <button class="btn btn-main" id="code-load" type="button" style="width:100%;margin-top:14px">이 코드로 불러오기</button>
+    <div id="code-choice" hidden style="margin-top:14px">
+      <p class="hint" style="margin:0 0 10px"><b>이 코드의 기록을 찾았어요.</b> 지금 이 기기의 기록과 어떻게 할까요?</p>
+      <button class="btn btn-main" id="code-merge" type="button" style="width:100%">합치기</button>
+      <p class="hint" style="margin:6px 0 12px">이 기기의 최애·추가 메뉴와 먹은 메뉴·별점 기록을 그 코드에 더해요. 기존 기록은 그대로 남아요.</p>
+      <button class="btn btn-ghost" id="code-over" type="button" style="width:100%">덮어쓰기</button>
+      <p class="hint" style="margin:6px 0 0">이 기기의 최애·추가 메뉴를 지우고 그 코드의 것으로 바꿔요. 이 기기에서 쌓은 먹은 메뉴·별점 기록은 현재 코드에 남아 있지만 불러온 코드에서는 보이지 않아요.</p>
+    </div>
     <p id="code-msg" class="form-msg" role="status" aria-live="polite"></p>
-    <p class="hint" style="margin-top:6px">불러오면 지금 이 기기의 최애 메뉴와 추가한 메뉴는 그 코드의 기록으로 바뀌어요.</p>
   </section>
 
   <button class="btn btn-ghost" type="button" data-view="home" style="width:100%">← 돌아가기</button>
@@ -973,22 +979,44 @@
     function manual() { codeNote('길게 눌러 직접 복사해 주세요: ' + did, ''); }
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(did).then(ok, manual); else manual();
   });
-  var loading = false;
+  var loading = false, found = null, choice = $('code-choice');
   $('code-load').addEventListener('click', function () {
     if (loading) return;
+    choice.hidden = true; found = null;
     var c = $('code-in').value.trim().toUpperCase().replace(/[\s_]+/g, '-');
     if (!CODE_RE.test(c)) { codeNote('코드 형식이 달라요. EP-XXXX-XXXX-XXXX 모양으로 입력해 주세요.', 'err'); return; }
     if (c === did) { codeNote('지금 쓰고 있는 코드예요.', ''); return; }
-    loading = true; codeNote('불러오는 중…', '');
+    loading = true; codeNote('찾는 중…', '');
     api('/rpc/load_profile', { method: 'POST', body: JSON.stringify({ p_code: c }) }).then(function (d) {
-      if (!d) { loading = false; codeNote('없는 코드예요. 코드를 다시 확인해 주세요.', 'err'); return; }
-      lsSet('eatpick.device', c);
-      lsSet('eatpick.favs', JSON.stringify(Array.isArray(d.favs) ? d.favs : []));
-      lsSet('eatpick.customs', JSON.stringify(d.customs && typeof d.customs === 'object' ? d.customs : {}));
-      lsSet('eatpick.pendings', '[]'); lsSet('eatpick.eaten', '[]');
-      codeNote('불러왔어요. 화면을 새로 고칠게요.', 'ok');
-      setTimeout(function () { location.reload(); }, 700);
+      loading = false;
+      if (!d) { codeNote('없는 코드예요. 코드를 다시 확인해 주세요.', 'err'); return; }
+      found = { code: c, favs: Array.isArray(d.favs) ? d.favs : [], customs: d.customs && typeof d.customs === 'object' ? d.customs : {} };
+      codeNote('', ''); choice.hidden = false;
     }).catch(function () { loading = false; codeNote('불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.', 'err'); });
+  });
+  function finish(f, c, cu, move) {
+    var old = did, done = function () {
+      lsSet('eatpick.device', f.code); lsSet('eatpick.favs', JSON.stringify(f2)); lsSet('eatpick.customs', JSON.stringify(cu));
+      lsSet('eatpick.pendings', '[]'); lsSet('eatpick.eaten', '[]');
+      codeNote('완료했어요. 화면을 새로 고칠게요.', 'ok');
+      setTimeout(function () { location.reload(); }, 700);
+    }, f2 = c;
+    loading = true; choice.hidden = true; codeNote('처리하는 중…', '');
+    var save = api('/rpc/save_profile', { method: 'POST', body: JSON.stringify({ p_code: f.code, p_data: { favs: f2, customs: cu } }), prefer: 'return=minimal' });
+    (move ? save.then(function () { return api('/rpc/merge_records', { method: 'POST', body: JSON.stringify({ p_from: old, p_to: f.code }), prefer: 'return=minimal' }); }) : save)
+      .then(done).catch(function () { loading = false; choice.hidden = false; codeNote('처리하지 못했어요. 잠시 뒤 다시 시도해 주세요.', 'err'); });
+  }
+  $('code-merge').addEventListener('click', function () {
+    if (!found || loading) return;
+    var fv = found.favs.slice(), cu = {}, k;
+    favs.forEach(function (n) { if (fv.indexOf(n) < 0) fv.push(n); });
+    for (k in found.customs) cu[k] = found.customs[k];
+    for (k in customs) if (!(k in cu)) cu[k] = customs[k];
+    finish(found, fv, cu, true);
+  });
+  $('code-over').addEventListener('click', function () {
+    if (!found || loading) return;
+    finish(found, found.favs, found.customs, false);
   });
 
   // 누적 보기: 내 기록 / 전체 합산 / 나의 최애
