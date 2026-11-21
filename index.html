@@ -80,7 +80,7 @@
   .chips, .cats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   .chip { border: 1.5px solid var(--line); background: #fff; border-radius: 999px; padding: 10px 16px; font-size: 15px; font-family: inherit; color: var(--ink); min-height: 48px; cursor: pointer; transition: transform .12s ease, background .15s ease, border-color .15s ease; }
   .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
-  .meal-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .meal-chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .meal-chips .chip { padding: 12px 8px; font-size: 17px; min-height: 54px; border-radius: 14px; }
   .meal-chips .chip.pop { animation: pop .35s ease; }
   .cat { border: 1.5px solid var(--accent); background: #fff; color: var(--accent); border-radius: 14px; padding: 14px 18px; font-size: 17px; font-weight: 700; font-family: inherit; min-height: 54px; flex: 1 1 calc(50% - 8px); cursor: pointer; transition: transform .12s ease, background .15s ease; }
@@ -224,6 +224,7 @@
       <button class="chip" type="button" data-meal="아침" aria-pressed="false">아침</button>
       <button class="chip" type="button" data-meal="점심" aria-pressed="false">점심</button>
       <button class="chip" type="button" data-meal="저녁" aria-pressed="true">저녁</button>
+      <button class="chip" type="button" data-meal="내일" aria-pressed="false">내일</button>
     </div>
 
     <p class="sub-title">기억력 테스트: 최근 뭘 먹었는지 기억나나요?</p>
@@ -275,7 +276,7 @@
   </section>
 
   <section id="step4" class="step tint-yolk win" aria-labelledby="s7" hidden>
-    <p class="win-title" id="s7">🎉 오늘의 <span class="meal-word">저녁</span> 메뉴 당첨!</p>
+    <p class="win-title" id="s7">🎉 <span id="win-day">오늘</span>의 <span id="win-meal">저녁 </span>메뉴 당첨!</p>
     <div class="win-emoji" id="win-emoji" aria-hidden="true">🍽️</div>
     <div class="win-name" id="win-name"></div>
     <p class="hint" id="win-cat"></p>
@@ -458,7 +459,8 @@
   var MEALS = { // 고른 끼니 기준으로 직전 3끼
     '아침': ['어제 저녁', '어제 점심', '어제 아침'],
     '점심': ['오늘 아침', '어제 저녁', '어제 점심'],
-    '저녁': ['오늘 점심', '오늘 아침', '어제 저녁']
+    '저녁': ['오늘 점심', '오늘 아침', '어제 저녁'],
+    '내일': ['오늘 아침', '오늘 점심', '오늘 저녁'] // 내일 메뉴를 고를 때는 오늘 먹은 세 끼를 적음
   };
   var mealBtns = document.querySelectorAll('[data-meal]');
   function setMeal(meal) {
@@ -468,6 +470,8 @@
       el.parentNode.querySelector('input').value = ''; // 끼니가 바뀌면 직전 3끼도 달라지므로 비움
     });
     document.querySelectorAll('.meal-word').forEach(function (el) { el.textContent = meal; });
+    document.getElementById('win-day').textContent = meal === '내일' ? '내일' : '오늘';
+    document.getElementById('win-meal').textContent = meal === '내일' ? '' : meal + ' ';
     window.__mealNow = meal;
     if (window.__afterMeal) window.__afterMeal(meal); // 먹었다고 확인한 메뉴를 해당 칸에 자동으로 채움
   }
@@ -639,7 +643,7 @@
   }
   eaten = eaten.filter(function (e) { return e && e.name && e.date && daysAgo(e.date) <= 2; }); // 이틀 지난 기록은 정리
   lsSet('eatpick.eaten', JSON.stringify(eaten));
-  var SLOTS = { '저녁': [[0, '점심'], [0, '아침'], [1, '저녁']], '점심': [[0, '아침'], [1, '저녁'], [1, '점심']], '아침': [[1, '저녁'], [1, '점심'], [1, '아침']] }; // [며칠 전, 식사]
+  var SLOTS = { '저녁': [[0, '점심'], [0, '아침'], [1, '저녁']], '점심': [[0, '아침'], [1, '저녁'], [1, '점심']], '아침': [[1, '저녁'], [1, '점심'], [1, '아침']], '내일': [[0, '아침'], [0, '점심'], [0, '저녁']] }; // [며칠 전, 식사]
   function upsertEaten(name, meal, date) { // 같은 날짜·식사 칸은 하나만 기억
     eaten = eaten.filter(function (e) { return !(e.meal === meal && e.date === date); });
     if (name) eaten.push({ name: name, meal: meal, date: date });
@@ -792,7 +796,7 @@
     window.__go(3);
     if (window.__burst) window.__burst();
     // 바로 순위에 넣지 않고, 다음에 접속했을 때 먹었는지 확인한 뒤에 넣음
-    pendings.push({ name: name, category: meta.category, at: Date.now(), meal: window.__mealNow || '저녁', date: ymd(new Date()) });
+    pendings.push({ name: name, category: meta.category, at: Date.now(), meal: window.__mealNow || '저녁', date: slotDate(window.__mealNow === '내일' ? -1 : 0) });
     pendings = pendings.slice(-10);
     lsSet('eatpick.pendings', JSON.stringify(pendings));
     $('win-note').textContent = '다시 접속하면 먹었는지 꼭 물어볼게요.';
@@ -930,7 +934,8 @@
     $('fb-ok').disabled = sending || !(choice === 'no' || (choice === 'yes' && stars > 0));
   }
   function showFb() {
-    current = pendings[0] || null;
+    current = null; // 먹을 날짜가 아직 안 된 선택(내일 메뉴)은 그날이 되면 물어봄
+    for (var i = 0; i < pendings.length; i++) { if (daysAgo(pendings[i].date || ymd(new Date(pendings[i].at))) >= 0) { current = pendings[i]; break; } }
     if (!current) { modal.hidden = true; document.body.classList.remove('modal-open'); return; }
     choice = ''; stars = 0; sending = false; fbSay('');
     $('fb-menu').textContent = info(current.name).emoji + ' ' + current.name;
