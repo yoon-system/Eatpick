@@ -288,6 +288,13 @@
     <p class="form-msg" id="win-note" role="status" aria-live="polite"></p>
     <div class="stack">
       <button id="fav-btn" class="btn btn-main" type="button">♥ 최애 메뉴 등록하기</button>
+      <form id="fav-form" novalidate>
+        <label class="field" style="margin-top:0"><span>내 최애 메뉴 직접 등록</span>
+          <input id="fav-name" type="text" maxlength="50" placeholder="예: 마라탕" autocomplete="off" enterkeyhint="done">
+        </label>
+        <button id="fav-add" class="btn btn-ghost" type="submit" style="width:100%;margin-top:10px">♥ 최애 메뉴로 등록</button>
+        <p id="fav-msg" class="form-msg" role="status" aria-live="polite"></p>
+      </form>
       <button id="addmenu-btn" class="btn btn-ghost" type="button" aria-expanded="false">＋ 메뉴 추가하기</button>
       <form id="addmenu-form" novalidate hidden>
         <label class="field" style="margin-top:0"><span>추가할 메뉴 이름</span>
@@ -587,7 +594,9 @@
   });
 
   // 2~3단계: 추천 4개 뽑기
-  var FAV_CHANCE = 0.1; // 랜덤 추천 때 최애 메뉴가 나올 확률
+  // 랜덤 추천 때 최애 메뉴가 나올 확률: 1개 5%, 2개 7.5%, 4개 10%처럼 개수가 2배가 될 때마다 2.5%p씩 늘고 최대 20%
+  function favChance(n) { return n < 1 ? 0 : Math.min(0.2, 0.05 + 0.025 * Math.log(n) / Math.LN2); }
+  window.__favChance = favChance;
   var currentCat = '';
   var lastShown = [];
   var picked = false;
@@ -606,12 +615,12 @@
     if (!MENUS) { hint.textContent = '메뉴를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.'; return; }
     var all = pool(currentCat);
     var favPool = currentCat === '랜덤' ? all.filter(function (n) { return favs.indexOf(n) >= 0; }) : [];
-    if (favPool.length && favPool.length < all.length) all = all.filter(function (n) { return favPool.indexOf(n) < 0; }); // 최애는 아래 10% 추첨으로만 나옴
+    if (favPool.length && favPool.length < all.length) all = all.filter(function (n) { return favPool.indexOf(n) < 0; }); // 최애는 아래 추첨으로만 나옴
     if (!all.length) { hint.textContent = currentCat + ' 분야에는 추천할 메뉴가 없어요. 다른 분야를 골라 보세요.'; lastShown = []; return; }
     var fresh = again ? all.filter(function (n) { return lastShown.indexOf(n) < 0; }) : all;
     var rest = all.filter(function (n) { return fresh.indexOf(n) < 0; });
     var chosen = shuffle(fresh).concat(shuffle(rest)).slice(0, 4);
-    if (favPool.length && all.length >= 3 && Math.random() < FAV_CHANCE) { // 랜덤 추천일 때 10% 확률로 최애 메뉴 하나를 섞어 넣음
+    if (favPool.length && all.length >= 3 && Math.random() < favChance(favPool.length)) { // 랜덤 추천일 때 최애 개수에 따른 확률로 최애 하나를 섞어 넣음
       var fav = favPool[Math.floor(Math.random() * favPool.length)];
       chosen = shuffle(chosen.slice(0, 3).concat([fav]));
     }
@@ -644,7 +653,7 @@
   var winner = null;
   function resetResultButtons() {
     $('win-note').textContent = '';
-    $('am-msg').textContent = '';
+    $('am-msg').textContent = ''; $('fav-msg').textContent = '';
     $('addmenu-form').hidden = true;
     $('addmenu-btn').setAttribute('aria-expanded', 'false');
     $('fav-btn').disabled = false;
@@ -683,6 +692,24 @@
     $('fav-btn').textContent = '♥ 이미 최애 메뉴예요';
     n.textContent = winner.name + josa(winner.name, '을', '를') + ' 최애 메뉴로 등록했어요. 누적 보기에서 볼 수 있어요.';
     n.className = 'form-msg ok';
+  });
+
+  // 7-(1) 보조: 뽑힌 메뉴가 아니어도 최애 메뉴를 직접 등록
+  $('fav-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var msg = $('fav-msg'), name = $('fav-name').value.trim();
+    function say(t, kind) { msg.textContent = t; msg.className = 'form-msg' + (kind ? ' ' + kind : ''); }
+    if (!name) { say('최애 메뉴 이름을 적어 주세요.', 'err'); return; }
+    menusP.then(function () {
+      var m = canon(name);
+      if (!m) { say('목록에 없는 메뉴예요. 아래 "메뉴 추가하기"로 분야를 정해 추가한 뒤 등록해 주세요.', 'err'); return; }
+      if (favs.indexOf(m.name) >= 0) { say(m.name + josa(m.name, '은', '는') + ' 이미 최애 메뉴예요.', 'err'); return; }
+      favs.push(m.name);
+      lsSet('eatpick.favs', JSON.stringify(favs));
+      $('fav-name').value = '';
+      if (winner && winner.name === m.name) $('fav-btn').textContent = '♥ 이미 최애 메뉴예요';
+      say(m.name + josa(m.name, '을', '를') + ' 최애 메뉴로 등록했어요. (최애 ' + favs.length + '개)', 'ok');
+    });
   });
 
   // 7-(2) 메뉴 추가하기: 이 기기의 추천에 넣고, 내 메일함이 아니라 문의 목록에도 '메뉴 추가 요청'으로 남김
