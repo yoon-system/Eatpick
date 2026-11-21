@@ -226,8 +226,8 @@
       <button class="chip" type="button" data-meal="저녁" aria-pressed="true">저녁</button>
     </div>
 
-    <p class="sub-title">최근 며칠간 먹은 메뉴를 고르세요</p>
-    <p class="hint"><strong style="color:var(--ink)">입력 없이 다음으로 넘어가도 돼요.</strong><br>기억나는 것만 적어주세요. 적은 메뉴는 추천에서 제외됩니다.<br>추천받아 먹었다고 확인한 메뉴는 해당 칸에 자동으로 채워져요.</p>
+    <p class="sub-title">기억력 테스트: 어제 뭐 먹었는지 기억나나요?</p>
+    <p class="hint"><strong style="color:var(--ink)">입력 없이 다음으로 넘어가도 돼요.</strong><br>기억나는 것만 적어도 충분해요. 적은 메뉴는 추천에서 제외됩니다.<br>전에 적어 둔 메뉴와 추천받아 먹었다고 확인한 메뉴는 해당 칸에 자동으로 채워져요.</p>
     <label class="field"><span class="slot-label" data-slot="0">1. 오늘 점심</span>
       <input type="text" maxlength="50" placeholder="먹은 메뉴 (예: 마라탕)" autocomplete="off" enterkeyhint="next">
     </label>
@@ -237,7 +237,7 @@
     <label class="field"><span class="slot-label" data-slot="2">3. 어제 저녁</span>
       <input type="text" maxlength="50" placeholder="먹은 메뉴 (예: 마라탕)" autocomplete="off" enterkeyhint="next">
     </label>
-    <p class="hint" style="margin-top:12px">입력한 내용은 이 기기 기록으로 저장해서 지금까지 먹은 메뉴 1~5위로 정리해요.</p>
+    <p class="hint" style="margin-top:12px">입력한 내용은 내 기록으로 저장해서 지금까지 먹은 메뉴 1~5위로 정리해요.</p>
     <button id="next1" class="btn btn-main" type="button" data-go="1" style="width:100%;margin-top:12px">다음: 고르기</button>
     <button class="btn btn-ghost" type="button" data-view="ranks" style="width:100%;margin-top:10px">누적 보기</button>
   </section>
@@ -640,6 +640,12 @@
   eaten = eaten.filter(function (e) { return e && e.name && e.date && daysAgo(e.date) <= 2; }); // 이틀 지난 기록은 정리
   lsSet('eatpick.eaten', JSON.stringify(eaten));
   var SLOTS = { '저녁': [[0, '점심'], [0, '아침'], [1, '저녁']], '점심': [[0, '아침'], [1, '저녁'], [1, '점심']], '아침': [[1, '저녁'], [1, '점심'], [1, '아침']] }; // [며칠 전, 식사]
+  function upsertEaten(name, meal, date) { // 같은 날짜·식사 칸은 하나만 기억
+    eaten = eaten.filter(function (e) { return !(e.meal === meal && e.date === date); });
+    if (name) eaten.push({ name: name, meal: meal, date: date });
+    lsSet('eatpick.eaten', JSON.stringify(eaten.slice(-12)));
+  }
+  function slotDate(daysBack) { var d = new Date(); d.setDate(d.getDate() - daysBack); return ymd(d); }
   function fillEaten() {
     var meal = window.__mealNow, inputs = document.querySelectorAll('#step1 input');
     if (!SLOTS[meal]) return;
@@ -656,6 +662,8 @@
       var v = inp.value.trim();
       if (v) typed.push({ idx: idx, v: v });
     });
+    var sm = SLOTS[window.__mealNow];
+    if (sm) sm.forEach(function (sl, idx) { if (!typed.some(function (t) { return t.idx === idx; })) upsertEaten(null, sl[1], slotDate(sl[0])); }); // 비운 칸은 기억에서도 지움
     menusP.then(function () {
       recent = [];
       var rows = [];
@@ -663,6 +671,8 @@
         var m = canon(t.v);
         var name = m ? m.name : t.v;
         if (recent.indexOf(name) < 0) recent.push(name);
+        var sl = SLOTS[window.__mealNow] && SLOTS[window.__mealNow][t.idx];
+        if (sl) upsertEaten(name, sl[1], slotDate(sl[0])); // 적은 메뉴를 기억해 두었다가 다음에 해당 칸에 자동 입력
         if (lastSaved[t.idx] !== name) {
           lastSaved[t.idx] = name;
           rows.push({ device_id: did, menu_name: name, category: m ? m.category : '기타', source: 'input' });
