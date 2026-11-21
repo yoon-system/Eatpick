@@ -146,6 +146,11 @@
   .win form { text-align: left; }
   .cat-random { background: var(--accent); color: #fff; box-shadow: 0 4px 0 var(--accent-dark); }
   .cat-random:hover { background: var(--accent); }
+  .favlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .favlist li { display: flex; gap: 8px; align-items: center; border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 10px; }
+  .favlist .nm { flex: 1; min-width: 0; font-weight: 600; text-align: left; }
+  .favlist button { border: 1.5px solid var(--accent); background: #fff; color: var(--accent); border-radius: 10px; padding: 8px 12px; font: inherit; font-size: 14px; min-height: 40px; cursor: pointer; }
+  .favlist input { flex: 1; min-width: 0; padding: 8px 10px; border: 1.5px solid #e6cfa8; border-radius: 10px; font: inherit; font-size: 16px; min-height: 40px; background: #fffdf8; }
   .rate { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 10px; }
   .rate button { border: 1.5px solid var(--yolk); background: #fff; border-radius: 12px; padding: 10px 0; font: inherit; font-size: 20px; color: #d49a00; min-height: 56px; cursor: pointer; line-height: 1.2; }
   .rate button small { display: block; font-size: 13px; color: var(--ink); }
@@ -191,8 +196,9 @@
 <main>
 <div id="home">
   <section id="fb-card" class="tint-coffee" aria-labelledby="fb-title" hidden>
-    <h2 id="fb-title">지난번에 고른 메뉴, 먹었나요?</h2>
+    <h2 id="fb-title">지난번에 추천받아 고른 메뉴, 먹었나요?</h2>
     <p id="fb-menu" style="font-size:18px;font-weight:700;margin:0 0 4px"></p>
+    <p class="hint" style="margin:0 0 6px">먹었다고 확인하면 "추천받아 선택한 메뉴" 순위에 들어가요.</p>
     <div id="fb-ask" class="actions">
       <button id="fb-yes" class="btn btn-main" type="button">YES 먹었어요</button>
       <button id="fb-no" class="btn btn-ghost" type="button">NO 안 먹었어요</button>
@@ -288,7 +294,7 @@
     <p class="form-msg" id="win-note" role="status" aria-live="polite"></p>
     <div class="stack">
       <button id="fav-btn" class="btn btn-main" type="button">♥ 최애 메뉴 등록하기</button>
-      <form id="fav-form" novalidate style="margin-top:22px;padding-top:20px;border-top:1px dashed var(--line)">
+      <form id="fav-form" novalidate style="margin-top:44px;padding-top:24px;border-top:1px dashed var(--line)">
         <label class="field" style="margin-top:0"><span>다른 최애 메뉴 등록하기</span>
           <input id="fav-name" type="text" maxlength="50" placeholder="예: 마라탕" autocomplete="off" enterkeyhint="done">
         </label>
@@ -296,6 +302,11 @@
         <button id="fav-add" class="btn btn-ghost" type="submit" style="width:100%;margin-top:12px">등록</button>
         <p id="fav-msg" class="form-msg" role="status" aria-live="polite"></p>
       </form>
+      <button id="favedit-btn" class="btn btn-ghost" type="button" aria-expanded="false">나의 최애 메뉴 수정하기</button>
+      <div id="favedit" hidden>
+        <ul id="favedit-list" class="favlist"></ul>
+        <p id="favedit-msg" class="form-msg" role="status" aria-live="polite"></p>
+      </div>
       <button id="addmenu-btn" class="btn btn-ghost" type="button" aria-expanded="false">＋ 메뉴 추가하기</button>
       <form id="addmenu-form" novalidate hidden>
         <label class="field" style="margin-top:0"><span>추가할 메뉴 이름</span>
@@ -327,11 +338,13 @@
       <p class="sub-title">지금까지 먹은 메뉴 1~5위</p>
       <ol class="rank" id="rank-my-input"><li class="rank-empty">불러오는 중…</li></ol>
       <p class="sub-title">추천받아 선택한 메뉴 1~5위</p>
+      <p class="hint" style="margin:0">추천받은 메뉴를 실제로 먹었다고 확인한 것만 세요.</p>
       <ol class="rank" id="rank-my-pick"><li class="rank-empty">불러오는 중…</li></ol>
       <p class="group-title">모두의 기록 (합산)</p>
       <p class="sub-title">추천받아 선택한 메뉴 1~5위</p>
+      <p class="hint" style="margin:0">실제로 먹었다고 확인한 메뉴만 세요.</p>
       <ol class="rank" id="rank-all-pick"><li class="rank-empty">불러오는 중…</li></ol>
-      <p class="group-title">내 최애 메뉴</p>
+      <p class="group-title">나의 최애 메뉴</p>
       <ol class="rank" id="rank-fav"><li class="rank-empty">아직 등록한 최애 메뉴가 없어요.</li></ol>
       <p class="hint" style="margin-top:14px">내 기기 기록은 이 브라우저를 기준으로 모여요. 폰과 PC는 따로 쌓이고, 브라우저 데이터를 지우면 내 기록은 새로 시작해요.</p>
     </details>
@@ -506,6 +519,8 @@
   }
   var customs = lsJson('eatpick.customs', {}); // 내가 추가한 메뉴 {이름: 분야}
   Object.keys(customs).forEach(function (n) { if (CATS.indexOf(customs[n]) < 0) delete customs[n]; });
+  var pendings = lsJson('eatpick.pendings', []); // 먹었는지 확인을 기다리는 추천 메뉴
+  if (!Array.isArray(pendings)) pendings = [];
   var favs = lsJson('eatpick.favs', []);       // 최애 메뉴 이름 목록
   if (!Array.isArray(favs)) favs = [];
 
@@ -692,30 +707,82 @@
     $('win-name').textContent = name;
     $('win-cat').textContent = meta.category;
     resetResultButtons();
-    if (favs.indexOf(name) >= 0) $('fav-btn').textContent = '♥ 이미 최애 메뉴예요';
-    else $('fav-btn').textContent = '♥ 최애 메뉴 등록하기';
+    syncFavBtn();
+    renderFavEdit();
     window.__go(3);
     if (window.__burst) window.__burst();
-    lsSet('eatpick.pending', JSON.stringify({ name: name, category: meta.category, at: Date.now() }));
-    insert('meals', [{ device_id: did, menu_name: name, category: meta.category, source: 'pick' }]).catch(function () {
-      $('win-note').textContent = '기록을 저장하지 못했어요. 인터넷 연결을 확인해 주세요.';
-      $('win-note').className = 'form-msg err';
-    });
+    // 바로 순위에 넣지 않고, 다음에 접속했을 때 먹었는지 확인한 뒤에 넣음
+    pendings.push({ name: name, category: meta.category, at: Date.now() });
+    pendings = pendings.slice(-10);
+    lsSet('eatpick.pendings', JSON.stringify(pendings));
+    $('win-note').textContent = '나중에 다시 접속하면 먹었는지 물어볼게요.';
+    $('win-note').className = 'form-msg';
   });
 
-  // 7-(1) 최애 메뉴 등록 (이 기기에 저장)
+  // 7-(1) 최애 메뉴 등록과 바로 취소 (이 기기에 저장)
+  function saveFavs() { lsSet('eatpick.favs', JSON.stringify(favs)); favHint(); renderFavEdit(); }
+  function syncFavBtn() { // 등록돼 있으면 "취소하기" 버튼으로 바뀜
+    var on = winner && favs.indexOf(winner.name) >= 0, b = $('fav-btn');
+    b.textContent = on ? '♥ 나의 최애로 등록됨 · 눌러서 취소하기' : '♥ 나의 최애 메뉴 등록하기';
+    b.className = 'btn ' + (on ? 'btn-ghost' : 'btn-main');
+  }
   $('fav-btn').addEventListener('click', function () {
     if (!winner) return;
-    var n = $('win-note');
-    if (favs.indexOf(winner.name) >= 0) { n.textContent = winner.name + josa(winner.name, '은', '는') + ' 이미 최애 메뉴예요.'; n.className = 'form-msg ok'; return; }
-    favs.push(winner.name);
-    lsSet('eatpick.favs', JSON.stringify(favs));
-    $('fav-btn').textContent = '♥ 이미 최애 메뉴예요';
-    favHint();
-    n.textContent = winner.name + josa(winner.name, '을', '를') + ' 최애 메뉴로 등록했어요. 누적 보기에서 볼 수 있어요.';
+    var n = $('win-note'), i = favs.indexOf(winner.name);
+    if (i >= 0) {
+      favs.splice(i, 1);
+      saveFavs(); syncFavBtn();
+      n.textContent = winner.name + josa(winner.name, '을', '를') + ' 나의 최애에서 뺐어요.';
+    } else {
+      favs.push(winner.name);
+      saveFavs(); syncFavBtn();
+      n.textContent = winner.name + josa(winner.name, '을', '를') + ' 나의 최애 메뉴로 등록했어요. 누적 보기에서 볼 수 있어요.';
+    }
     n.className = 'form-msg ok';
   });
 
+  // 7-(1) 나의 최애 메뉴 수정하기: 목록에서 이름을 바꾸거나 삭제
+  function renderFavEdit() {
+    var ul = $('favedit-list'), msg = $('favedit-msg');
+    ul.textContent = '';
+    function say(t, kind) { msg.textContent = t; msg.className = 'form-msg' + (kind ? ' ' + kind : ''); }
+    if (!favs.length) { var li0 = document.createElement('li'); li0.className = 'hint'; li0.style.border = '0'; li0.textContent = '등록한 최애 메뉴가 없어요.'; ul.appendChild(li0); return; }
+    favs.forEach(function (name, idx) {
+      var li = document.createElement('li');
+      function view() {
+        li.textContent = '';
+        var nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = info(name).emoji + ' ' + name;
+        var ed = document.createElement('button'); ed.type = 'button'; ed.textContent = '수정';
+        var del = document.createElement('button'); del.type = 'button'; del.textContent = '삭제';
+        ed.addEventListener('click', edit);
+        del.addEventListener('click', function () { favs.splice(idx, 1); saveFavs(); syncFavBtn(); say(name + josa(name, '을', '를') + ' 나의 최애에서 뺐어요.', 'ok'); });
+        li.appendChild(nm); li.appendChild(ed); li.appendChild(del);
+      }
+      function edit() {
+        li.textContent = '';
+        var inp = document.createElement('input'); inp.type = 'text'; inp.maxLength = 50; inp.value = name; inp.setAttribute('aria-label', name + ' 이름 수정');
+        var ok = document.createElement('button'); ok.type = 'button'; ok.textContent = '저장';
+        var no = document.createElement('button'); no.type = 'button'; no.textContent = '취소';
+        no.addEventListener('click', view);
+        ok.addEventListener('click', function () {
+          var v = inp.value.trim();
+          if (!v) { say('메뉴 이름을 적어 주세요.', 'err'); return; }
+          var m = canon(v);
+          if (!m) { say('목록에 없는 메뉴예요. "메뉴 추가하기"로 먼저 추가해 주세요.', 'err'); return; }
+          if (m.name !== name && favs.indexOf(m.name) >= 0) { say(m.name + josa(m.name, '은', '는') + ' 이미 나의 최애 메뉴예요.', 'err'); return; }
+          favs[idx] = m.name; saveFavs(); syncFavBtn();
+          say('나의 최애를 ' + m.name + euro(m.name) + ' 바꿨어요.', 'ok');
+        });
+        li.appendChild(inp); li.appendChild(ok); li.appendChild(no); inp.focus();
+      }
+      view(); ul.appendChild(li);
+    });
+  }
+  $('favedit-btn').addEventListener('click', function () {
+    var p = $('favedit'); p.hidden = !p.hidden;
+    $('favedit-btn').setAttribute('aria-expanded', String(!p.hidden));
+    if (!p.hidden) renderFavEdit();
+  });
   function favHint() { // 최애 메뉴가 뽑힐 확률 안내 (랜덤 추천 한 번 기준)
     var n = favs.length;
     $('fav-chance').textContent = '최애 메뉴가 뽑힐 확률: 약 16.7% (🎲 랜덤 추천 한 번 기준)' + (n ? ' · 최애 ' + n + '개 중 하나당 약 ' + (100 / 6 / n).toFixed(1) + '%' : '');
@@ -730,13 +797,11 @@
     menusP.then(function () {
       var m = canon(name);
       if (!m) { say('목록에 없는 메뉴예요. 아래 "메뉴 추가하기"로 분야를 정해 추가한 뒤 등록해 주세요.', 'err'); return; }
-      if (favs.indexOf(m.name) >= 0) { say(m.name + josa(m.name, '은', '는') + ' 이미 최애 메뉴예요.', 'err'); return; }
+      if (favs.indexOf(m.name) >= 0) { say(m.name + josa(m.name, '은', '는') + ' 이미 나의 최애 메뉴예요.', 'err'); return; }
       favs.push(m.name);
-      lsSet('eatpick.favs', JSON.stringify(favs));
       $('fav-name').value = '';
-      if (winner && winner.name === m.name) $('fav-btn').textContent = '♥ 이미 최애 메뉴예요';
-      favHint();
-      say(m.name + josa(m.name, '을', '를') + ' 최애 메뉴로 등록했어요. (최애 ' + favs.length + '개)', 'ok');
+      saveFavs(); syncFavBtn();
+      say(m.name + josa(m.name, '을', '를') + ' 나의 최애 메뉴로 등록했어요. (최애 ' + favs.length + '개)', 'ok');
     });
   });
 
@@ -763,42 +828,52 @@
     });
   });
 
-  // 8번: 다음 접속 때 실제로 먹었는지와 평점
-  var pending = lsJson('eatpick.pending', null);
+  // 8번: 다음 접속 때 추천받은 메뉴를 보여주고 실제로 먹었는지 확인. 먹었다고 하면 그때 "추천받아 선택한 메뉴" 순위에 넣음
   var WAIT = 3 * 60 * 60 * 1000; // 고른 지 3시간이 지난 뒤 접속하면 물어봄
+  var oldPending = lsJson('eatpick.pending', null); // 예전 방식으로 저장된 대기 항목이 있으면 옮겨 둠
+  if (oldPending && oldPending.name) { pendings.push(oldPending); lsSet('eatpick.pendings', JSON.stringify(pendings)); }
+  lsSet('eatpick.pending', 'null');
+  var current = null;
   function fbSay(t, kind) { var m = $('fb-msg'); m.textContent = t; m.className = 'form-msg' + (kind ? ' ' + kind : ''); }
+  function dueItem() { for (var i = 0; i < pendings.length; i++) if (Date.now() - pendings[i].at >= WAIT) return pendings[i]; return null; }
+  function showFb() {
+    current = dueItem();
+    if (!current) { $('fb-card').hidden = true; return; }
+    $('fb-menu').textContent = info(current.name).emoji + ' ' + current.name;
+    $('fb-ask').hidden = false; $('fb-rate').hidden = true; $('fb-skip').hidden = false; fbSay('');
+    $('fb-card').hidden = false;
+  }
   function fbDone(text) {
-    lsSet('eatpick.pending', 'null');
-    pending = null;
+    pendings = pendings.filter(function (x) { return x !== current; });
+    lsSet('eatpick.pendings', JSON.stringify(pendings));
+    current = null;
     $('fb-ask').hidden = true; $('fb-rate').hidden = true; $('fb-skip').hidden = true;
     fbSay(text, 'ok');
-    setTimeout(function () { $('fb-card').hidden = true; }, 3500);
+    setTimeout(showFb, 3000); // 확인할 메뉴가 더 있으면 이어서 물어봄
   }
   function sendFb(ate, rating) {
-    var row = { device_id: did, menu_name: pending.name, category: pending.category, ate: ate };
+    var row = { device_id: did, menu_name: current.name, category: current.category, ate: ate };
     if (rating) row.rating = rating;
-    return insert('feedback', [row]);
+    var jobs = [insert('feedback', [row])];
+    if (ate) jobs.push(insert('meals', [{ device_id: did, menu_name: current.name, category: current.category, source: 'pick' }])); // 먹었다고 확인된 선택만 순위에 들어감
+    return Promise.all(jobs);
   }
-  if (pending && pending.name && Date.now() - pending.at >= WAIT) {
-    $('fb-menu').textContent = info(pending.name).emoji + ' ' + pending.name;
-    $('fb-card').hidden = false;
-    menusP.then(function () { if (pending) $('fb-menu').textContent = info(pending.name).emoji + ' ' + pending.name; });
-  }
+  if (dueItem()) { showFb(); menusP.then(function () { if (current) $('fb-menu').textContent = info(current.name).emoji + ' ' + current.name; }); }
   $('fb-yes').addEventListener('click', function () { $('fb-ask').hidden = true; $('fb-rate').hidden = false; fbSay(''); });
   $('fb-no').addEventListener('click', function () {
-    if (!pending) return;
-    sendFb(false).then(function () { fbDone('알려줘서 고마워요. 다음엔 꼭 맛있는 걸로 드세요!'); }).catch(function () { fbSay('저장하지 못했어요. 잠시 후 다시 눌러 주세요.', 'err'); });
+    if (!current) return;
+    sendFb(false).then(function () { fbDone('알려줘서 고마워요. 이 메뉴는 순위에 넣지 않을게요.'); }).catch(function () { fbSay('저장하지 못했어요. 잠시 후 다시 눌러 주세요.', 'err'); });
   });
   document.querySelectorAll('#fb-rate [data-r]').forEach(function (b) {
     b.addEventListener('click', function () {
-      if (!pending) return;
+      if (!current) return;
       var r = Number(b.getAttribute('data-r'));
-      sendFb(true, r).then(function () { fbDone('평점 ' + r + '점 남겼어요. 고마워요!'); }).catch(function () { fbSay('저장하지 못했어요. 잠시 후 다시 눌러 주세요.', 'err'); });
+      sendFb(true, r).then(function () { fbDone('평점 ' + r + '점을 남기고 순위에 넣었어요. 고마워요!'); }).catch(function () { fbSay('저장하지 못했어요. 잠시 후 다시 눌러 주세요.', 'err'); });
     });
   });
   $('fb-skip').addEventListener('click', function () { $('fb-card').hidden = true; }); // 답하지 않으면 다음 접속 때 다시 물어봄
 
-  // 누적 보기: 내 기기 / 전체 합산 / 내 최애
+  // 누적 보기: 내 기기 / 전체 합산 / 나의 최애
   function fill(id, rows) {
     var ol = $(id); ol.textContent = '';
     function empty(t) { var e = document.createElement('li'); e.className = 'rank-empty'; e.textContent = t; ol.appendChild(e); }
