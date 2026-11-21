@@ -1043,9 +1043,20 @@
     for (k in customs) if (!(k in cu)) cu[k] = customs[k];
     finish(found, fv, cu, true);
   });
+  // 변경하기(덮어쓰기)를 막아 둔 코드 (코드 자체는 공개 페이지에 적지 않고 해시값만 둠)
+  var NO_OVERWRITE = ["55be2137dd7cf87ae6d1c2491cadc99ddacae38779ef963919ffef5613982ec6", "606483e02b991b98ac989ba6210ce09856825f64791d21abd7c301075713ac60"];
+  function hex(buf) { return [].map.call(new Uint8Array(buf), function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
+  function isLocked(code) {
+    if (!(window.crypto && crypto.subtle && window.TextEncoder)) return Promise.resolve(false);
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(code)).then(function (b) { return NO_OVERWRITE.indexOf(hex(b)) >= 0; }).catch(function () { return false; });
+  }
   $('code-over').addEventListener('click', function () {
     if (!found || loading) return;
-    finish(found, found.favs, found.customs, false);
+    var f = found;
+    isLocked(did).then(function (locked) {
+      if (locked) { codeNote('본 코드는 다른 코드로 변경(덮어쓰기) 불가능합니다.', 'err'); return; }
+      finish(f, f.favs, f.customs, false);
+    });
   });
 
   // 누적 보기: 내 기록 / 전체 합산 / 나의 최애
