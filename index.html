@@ -61,15 +61,12 @@
   .form-msg.ok { color: #1f7a3d; font-weight: 700; }
   .form-msg.err { color: #b3261e; font-weight: 700; }
   .btn:disabled { opacity: .6; cursor: default; }
+  [hidden] { display: none !important; }
   .badge { display: inline-block; font-size: 12px; font-weight: 700; color: var(--todo); background: var(--todo-bg); border-radius: 6px; padding: 2px 8px; margin-left: 6px; vertical-align: middle; }
   .result { background: var(--accent-soft); border-radius: 12px; padding: 14px 16px; margin-top: 12px; }
   .result strong { font-size: 18px; }
   ol.rank { margin: 12px 0 0; padding-left: 22px; }
   ol.rank li { margin-bottom: 4px; }
-  .card-lines { list-style: none; margin: 0; padding: 0; }
-  .card-lines li { padding: 10px 0; border-top: 1px solid var(--line); }
-  .card-lines li:first-child { border-top: 0; padding-top: 0; }
-  .card-lines b { display: block; font-size: 13px; color: var(--sub); font-weight: 600; }
   footer { text-align: center; font-size: 13px; color: var(--sub); margin-top: 24px; }
   @media (max-width: 420px) {
     h1 { font-size: 23px; }
@@ -79,13 +76,14 @@
 </head>
 <body>
 <main>
-  <p class="eyebrow">요알못 나혼산 · 혼자 살면서 요리를 잘 못하는 사람</p>
-  <h1>저녁 메뉴를 정할 때, 최근에 먹지 않은 메뉴가 바로 떠오르지 않아서 불편하다.</h1>
-  <p class="lead">지금은 머릿속 기억으로 고르고, 안 떠오르면 간단히 때웁니다.</p>
+<div id="home">
+  <p class="eyebrow">요알못 나혼산 · 저녁도 맛있게 먹자!</p>
+  <h1>저녁 메뉴 맛있는 걸로 고르기</h1>
+  <p class="lead">최근 메뉴를 적고, 랜덤으로 저녁 메뉴 추천받기</p>
 
-  <section aria-labelledby="s1">
-    <h2 id="s1"><span class="num">1</span>최근 며칠간 먹은 저녁 메뉴를 고르세요</h2>
-    <p class="hint">고른 메뉴는 추천에서 빠집니다.</p>
+  <section id="step1" class="step" aria-labelledby="s1">
+    <h2 id="s1"><span class="num">1</span>최근 며칠 먹은 메뉴를 적으세요</h2>
+    <p class="hint">기억나는 것만 적고 선택하세요. 기억 안 나면 비워 둬도 돼요. 고른 메뉴는 추천에서 빠집니다.</p>
     <div class="chips">
       <button class="chip" type="button">메뉴 A</button>
       <button class="chip" type="button">메뉴 B</button>
@@ -95,24 +93,25 @@
     </div>
     <label class="other" for="other-menu">기타: 목록에 없는 메뉴는 이름을 직접 쓰세요. 분야는 기타로 들어가고 나중에 바꿀 수 있어요</label>
     <input id="other-menu" class="other-input" type="text" placeholder="먹은 메뉴를 직접 입력 (예: 마라탕)">
-    <p class="hint" style="margin-top:14px">언제 먹었나요? 고르지 않아도 됩니다. 건너뛰면 오늘로 기록합니다.</p>
+    <p class="hint" style="margin-top:14px">언제 먹었나요? 기억나면 골라 주세요. 건너뛰어도 됩니다.</p>
     <div class="chips" style="margin-top:6px">
-      <button class="chip" type="button">오늘</button>
-      <button class="chip" type="button">어제</button>
-      <button class="chip" type="button">그저께</button>
+      <button class="chip" type="button">오늘 점심</button>
+      <button class="chip" type="button">어제 저녁</button>
+      <button class="chip" type="button">어제 점심</button>
     </div>
     <p class="hint" style="margin-top:12px">메뉴 A~D는 예시 값입니다.<span class="badge">나중에 연결</span></p>
+    <button class="btn btn-main" type="button" data-go="1" style="width:100%;margin-top:12px">다음: 분야 고르기</button>
   </section>
 
-  <section aria-labelledby="s2">
+  <section id="step2" class="step" aria-labelledby="s2" hidden>
     <h2 id="s2"><span class="num">2</span>오늘 땡기는 분야를 누르세요</h2>
     <div class="cats">
-      <button class="cat" type="button">한식</button>
-      <button class="cat" type="button">양식</button>
-      <button class="cat" type="button">일식</button>
-      <button class="cat" type="button">중식</button>
-      <button class="cat" type="button">분식</button>
-      <button class="cat" type="button">기타</button>
+      <button class="cat" type="button" data-go="2">한식</button>
+      <button class="cat" type="button" data-go="2">양식</button>
+      <button class="cat" type="button" data-go="2">일식</button>
+      <button class="cat" type="button" data-go="2">중식</button>
+      <button class="cat" type="button" data-go="2">분식</button>
+      <button class="cat" type="button" data-go="2">기타</button>
     </div>
     <p class="hint" style="margin-top:12px">기타는 내가 직접 추가한 메뉴에서 추천합니다.</p>
     <details class="stats">
@@ -125,9 +124,10 @@
       </div>
       <p class="hint" style="margin-top:8px">직접 추가한 메뉴는 처음에 기타에 들어갑니다. 아래는 예시 값입니다.<span class="badge">나중에 연결</span></p>
     </details>
+    <button class="btn btn-ghost" type="button" data-go="0" style="width:100%;margin-top:12px">← 이전: 먹은 메뉴 적기</button>
   </section>
 
-  <section aria-labelledby="s3">
+  <section id="step3" class="step" aria-labelledby="s3" hidden>
     <h2 id="s3"><span class="num">3</span>먹은 메뉴를 뺀 저녁 메뉴 4개를 추천합니다</h2>
     <div class="result">
       <strong>추천 메뉴 (예시)</strong><span class="badge">나중에 연결</span>
@@ -144,6 +144,7 @@
       <button class="btn btn-main" type="button">이걸로 정했어요</button>
     </div>
     <p class="hint" style="margin-top:12px">원하는 메뉴가 없으면 다시 뽑습니다. 이전에 나온 메뉴가 더 마음에 들면 1번의 기타에 쓰고 선택하세요.</p>
+    <button class="btn btn-ghost" type="button" data-go="1" style="width:100%;margin-top:4px">← 분야 다시 고르기</button>
   </section>
 
   <section aria-labelledby="s4">
@@ -161,6 +162,12 @@
     </details>
   </section>
 
+  <button id="open-inquiry" class="btn btn-ghost" type="button" data-view="inquiry" style="width:100%;margin-top:4px">문의 남기기</button>
+  <footer>문의 폼은 연결되어 있고, 추천 목록과 먹은 메뉴 저장은 다음 단계에서 연결합니다.</footer>
+</div>
+
+<div id="inquiry-view" hidden>
+  <button class="btn btn-ghost" type="button" data-view="home" style="width:100%;margin-bottom:16px">← 돌아가기</button>
   <section aria-labelledby="s6">
     <h2 id="s6">문의 남기기</h2>
     <p class="hint">메뉴 추가 요청, 오류·불편 신고, 의견·후기를 남겨 주세요. 모든 칸은 비워 둬도 되지만 한 칸은 채워야 보낼 수 있어요. 답장은 드리지 않아요.</p>
@@ -215,19 +222,31 @@
     </form>
   </section>
 
-  <section aria-labelledby="s5">
-    <h2 id="s5">기획 카드</h2>
-    <ul class="card-lines">
-      <li><b>불편 한 줄</b>나는 저녁 메뉴를 정할 때, 최근에 먹지 않은 메뉴가 바로 떠오르지 않아서 불편하다.</li>
-      <li><b>누가</b>혼자 살면서 요리를 잘 못하는 사람(요알못 나혼산)</li>
-      <li><b>지금은 어떻게 버티나</b>머릿속 기억으로 고르고, 안 떠오르면 간단히 때운다.</li>
-      <li><b>이 페이지가 해 줄 한 가지</b>최근 며칠간 먹은 저녁 메뉴를 고르고 땡기는 분야(한식·양식·일식·중식·분식·기타)를 누르면, 먹은 메뉴를 뺀 저녁 메뉴를 추천한다.</li>
-      <li><b>필요한 것</b>저장 (추천받아 고른 메뉴의 횟수로 취향 베스트 1~5위 기억 + 분야별 추천 메뉴 목록)</li>
-    </ul>
-  </section>
-
-  <footer>문의 폼은 연결되어 있고, 추천 목록과 먹은 메뉴 저장은 다음 단계에서 연결합니다.</footer>
+  <button class="btn btn-ghost" type="button" data-view="home" style="width:100%">← 돌아가기</button>
+</div>
 </main>
+<script>
+(function () {
+  var steps = [document.getElementById('step1'), document.getElementById('step2'), document.getElementById('step3')];
+  function go(n) { // 지정한 단계만 보이게 하고 맨 위로 이동
+    steps.forEach(function (el, i) { el.hidden = (i !== n); });
+    window.scrollTo(0, 0);
+  }
+  var home = document.getElementById('home');
+  var inquiry = document.getElementById('inquiry-view');
+  function showView(name) { // 첫 화면과 문의 화면 전환
+    home.hidden = (name !== 'home');
+    inquiry.hidden = (name !== 'inquiry');
+    window.scrollTo(0, 0);
+  }
+  document.querySelectorAll('[data-view]').forEach(function (b) {
+    b.addEventListener('click', function () { showView(b.getAttribute('data-view')); });
+  });
+  document.querySelectorAll('[data-go]').forEach(function (b) {
+    b.addEventListener('click', function () { go(Number(b.getAttribute('data-go'))); });
+  });
+})();
+</script>
 <script>
 (function () {
   var ENDPOINT = 'https://sfblawaqhebcucsdpzzc.supabase.co/rest/v1/inquiries';
