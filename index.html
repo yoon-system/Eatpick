@@ -133,6 +133,7 @@
   .form-msg.err { color: #b3261e; font-weight: 700; }
   [hidden] { display: none !important; }
   .badge { display: inline-block; font-size: 12px; font-weight: 700; color: var(--todo); background: var(--todo-bg); border-radius: 6px; padding: 2px 8px; margin-left: 6px; vertical-align: middle; }
+  .code-box { font-size: 24px; font-weight: 800; letter-spacing: 2px; text-align: center; background: #fffdf8; border: 1.5px dashed #e6cfa8; border-radius: 12px; padding: 16px 8px; margin: 14px 0 12px; user-select: all; word-break: break-all; }
   footer { text-align: center; font-size: 13px; color: var(--sub); margin-top: 24px; }
 
   /* 결과 화면, 평점, 폭죽 */
@@ -310,7 +311,7 @@
     <button class="linkbtn" type="button" data-go="0" style="display:block;margin:12px auto 0">처음으로 돌아가기</button>
   </section>
 
-  <footer>기록은 이 기기를 기준으로 쌓이고, 순위는 모든 방문자의 기록을 합산해서도 보여줘요.</footer>
+  <footer>기록은 내 기록 코드를 기준으로 쌓이고, 순위는 모든 방문자의 기록을 합산해서도 보여줘요.</footer>
 </div>
 
 <div id="ranks-view" hidden>
@@ -318,10 +319,10 @@
   <section class="has-peek tint-toast" aria-labelledby="s4">
     <span class="peek" data-chr="toast" aria-hidden="true"></span>
     <h2 id="s4">누적 보기</h2>
-    <p class="hint">내 기기에서 쌓은 기록과, 모든 방문자의 기록을 합산한 순위를 따로 보여줘요.</p>
+    <p class="hint">내 기록과, 모든 방문자의 기록을 합산한 순위를 따로 보여줘요.</p>
     <details class="stats" id="rank-details" open>
       <summary>순위 보기</summary>
-      <p class="group-title">내 기기 기록</p>
+      <p class="group-title">내 기록</p>
       <p class="sub-title">지금까지 먹은 메뉴 1~5위</p>
       <ol class="rank" id="rank-my-input"><li class="rank-empty">불러오는 중…</li></ol>
       <p class="sub-title">추천받아 선택한 메뉴 1~5위</p>
@@ -333,8 +334,21 @@
       <ol class="rank" id="rank-all-pick"><li class="rank-empty">불러오는 중…</li></ol>
       <p class="group-title">나의 최애 메뉴</p>
       <ol class="rank" id="rank-fav"><li class="rank-empty">아직 등록한 최애 메뉴가 없어요.</li></ol>
-      <p class="hint" style="margin-top:14px">내 기기 기록은 이 브라우저를 기준으로 모여요. 폰과 PC는 따로 쌓이고, 브라우저 데이터를 지우면 내 기록은 새로 시작해요.</p>
+      <p class="hint" style="margin-top:14px">내 기록은 아래 '내 기록 코드'를 기준으로 모여요. 같은 코드를 입력하면 다른 기기에서도 이어서 볼 수 있어요.</p>
     </details>
+  </section>
+
+  <section class="tint-coffee" aria-labelledby="s7" style="margin-top:16px">
+    <h2 id="s7">내 기록 코드</h2>
+    <p class="hint">이 코드만 있으면 다른 폰이나 PC, 브라우저 데이터를 지운 뒤에도 내 기록(먹은 메뉴, 별점, 최애 메뉴)을 이어서 볼 수 있어요. 코드는 나만 알고 있어야 해요. 아는 사람은 누구나 이 기록을 볼 수 있어요.</p>
+    <p class="code-box" id="my-code" aria-label="내 기록 코드"></p>
+    <button class="btn btn-ghost" id="code-copy" type="button" style="width:100%">코드 복사하기</button>
+    <label class="field" style="margin-top:22px"><span>다른 기기에서 쓰던 코드로 불러오기</span>
+      <input id="code-in" type="text" maxlength="20" placeholder="EP-XXXX-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    </label>
+    <button class="btn btn-main" id="code-load" type="button" style="width:100%;margin-top:14px">이 코드로 불러오기</button>
+    <p id="code-msg" class="form-msg" role="status" aria-live="polite"></p>
+    <p class="hint" style="margin-top:6px">불러오면 지금 이 기기의 최애 메뉴와 추가한 메뉴는 그 코드의 기록으로 바뀌어요.</p>
   </section>
 
   <button class="btn btn-ghost" type="button" data-view="home" style="width:100%">← 돌아가기</button>
@@ -526,11 +540,16 @@
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { mem[k] = v; } }
   function lsJson(k, fallback) { try { var v = JSON.parse(lsGet(k)); return v == null ? fallback : v; } catch (e) { return fallback; } }
 
-  var did = lsGet('eatpick.device');
-  if (!did) {
-    did = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('d' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12));
-    lsSet('eatpick.device', did);
+  // 내 기록 코드: 사람마다 다른 무작위 코드 (EP-XXXX-XXXX-XXXX, 헷갈리는 0/O/1/I 제외). 이 코드가 곧 내 기록의 열쇠
+  var CODE_RE = /^EP-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/, ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  function newCode() {
+    var a = new Uint8Array(12), i, out = '';
+    if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(a); else for (i = 0; i < 12; i++) a[i] = Math.floor(Math.random() * 256);
+    for (i = 0; i < 12; i++) out += (i % 4 === 0 ? '-' : '') + ALPHA.charAt(a[i] % 32);
+    return 'EP' + out;
   }
+  var did = lsGet('eatpick.device');
+  if (!did || !CODE_RE.test(did)) { did = newCode(); lsSet('eatpick.device', did); }
   var customs = lsJson('eatpick.customs', {}); // 내가 추가한 메뉴 {이름: 분야}
   Object.keys(customs).forEach(function (n) { if (CATS.indexOf(customs[n]) < 0) delete customs[n]; });
   var pendings = lsJson('eatpick.pendings', []); // 먹었는지 확인을 기다리는 추천 메뉴
@@ -541,6 +560,12 @@
   var MENUS = null;
   var menusP = api('/menus?select=category,name,aliases,emoji').then(function (m) { MENUS = m; return m; }).catch(function () { return null; });
 
+  // 최애 메뉴와 추가한 메뉴를 코드에 묶어 서버에 저장 (다른 기기에서 불러올 수 있게)
+  var syncT = null;
+  function pushProfile() {
+    return api('/rpc/save_profile', { method: 'POST', body: JSON.stringify({ p_code: did, p_data: { favs: favs, customs: customs } }), prefer: 'return=minimal' });
+  }
+  function syncProfile() { clearTimeout(syncT); syncT = setTimeout(function () { pushProfile().catch(function () {}); }, 600); }
   function josa(w, a, b) { // 받침이 있으면 a, 없으면 b (은/는, 을/를)
     var c = String(w).charCodeAt(String(w).length - 1);
     return (c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28) ? a : b;
@@ -758,7 +783,7 @@
   });
 
   // 7-(1) 최애 메뉴 등록과 바로 취소 (이 기기에 저장)
-  function saveFavs() { lsSet('eatpick.favs', JSON.stringify(favs)); favHint(); renderFavEdit(); }
+  function saveFavs() { lsSet('eatpick.favs', JSON.stringify(favs)); favHint(); renderFavEdit(); syncProfile(); }
   function syncFavBtn() { // 등록돼 있으면 "취소하기" 버튼으로 바뀜
     var on = winner && favs.indexOf(winner.name) >= 0, b = $('fav-btn');
     b.textContent = on ? '♥ 나의 최애로 등록됨 · 눌러서 취소하기' : '♥ 나의 최애 메뉴 등록하기';
@@ -860,7 +885,7 @@
       var dup = sameName(name); // 이름만 비교: 분야가 달라도 같은 이름이면 추가하지 않음
       if (dup) { say('같은 메뉴가 있습니다. (' + dup + ')', 'err'); return; }
       customs[name] = cat;
-      lsSet('eatpick.customs', JSON.stringify(customs));
+      lsSet('eatpick.customs', JSON.stringify(customs)); syncProfile();
       $('am-name').value = '';
       say(name + josa(name, '을', '를') + ' ' + cat + '에 추가했어요. 이 기기에서 ' + cat + '과 랜덤 추천에 나와요.', 'ok');
       insert('inquiries', [{ kind: '메뉴 추가 요청', menu_name: name.slice(0, 50), category: cat }]).catch(function () {});
@@ -938,7 +963,35 @@
   });
   if (pendings.length) { showFb(); menusP.then(function () { if (current) $('fb-menu').textContent = info(current.name).emoji + ' ' + current.name; }); }
 
-  // 누적 보기: 내 기기 / 전체 합산 / 나의 최애
+  // 내 기록 코드 보기·복사·불러오기
+  var codeEl = $('my-code'), codeMsg = $('code-msg');
+  function codeNote(t, k) { codeMsg.textContent = t; codeMsg.className = 'form-msg' + (k ? ' ' + k : ''); }
+  codeEl.textContent = did;
+  pushProfile().catch(function () {}); // 코드를 서버에 등록해 두면 다른 기기에서 바로 불러올 수 있음
+  $('code-copy').addEventListener('click', function () {
+    function ok() { codeNote('코드를 복사했어요.', 'ok'); }
+    function manual() { codeNote('길게 눌러 직접 복사해 주세요: ' + did, ''); }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(did).then(ok, manual); else manual();
+  });
+  var loading = false;
+  $('code-load').addEventListener('click', function () {
+    if (loading) return;
+    var c = $('code-in').value.trim().toUpperCase().replace(/[\s_]+/g, '-');
+    if (!CODE_RE.test(c)) { codeNote('코드 형식이 달라요. EP-XXXX-XXXX-XXXX 모양으로 입력해 주세요.', 'err'); return; }
+    if (c === did) { codeNote('지금 쓰고 있는 코드예요.', ''); return; }
+    loading = true; codeNote('불러오는 중…', '');
+    api('/rpc/load_profile', { method: 'POST', body: JSON.stringify({ p_code: c }) }).then(function (d) {
+      if (!d) { loading = false; codeNote('없는 코드예요. 코드를 다시 확인해 주세요.', 'err'); return; }
+      lsSet('eatpick.device', c);
+      lsSet('eatpick.favs', JSON.stringify(Array.isArray(d.favs) ? d.favs : []));
+      lsSet('eatpick.customs', JSON.stringify(d.customs && typeof d.customs === 'object' ? d.customs : {}));
+      lsSet('eatpick.pendings', '[]'); lsSet('eatpick.eaten', '[]');
+      codeNote('불러왔어요. 화면을 새로 고칠게요.', 'ok');
+      setTimeout(function () { location.reload(); }, 700);
+    }).catch(function () { loading = false; codeNote('불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.', 'err'); });
+  });
+
+  // 누적 보기: 내 기록 / 전체 합산 / 나의 최애
   function fill(id, rows) {
     var ol = $(id); ol.textContent = '';
     function empty(t) { var e = document.createElement('li'); e.className = 'rank-empty'; e.textContent = t; ol.appendChild(e); }
