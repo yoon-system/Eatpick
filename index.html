@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#fffaf0">
-<title>요알못 나혼산 · 저녁 메뉴 정하기</title>
+<title>요알못 나혼산 · 맛있는 메뉴 고르기</title>
 <style>
   :root {
     --bg: #fff4dc;
@@ -204,8 +204,8 @@
 <main>
 <div id="home">
   <header class="hero">
-    <p class="eyebrow">요알못 나혼산 · 저녁도 맛있게 먹자!</p>
-    <h1><span class="mark">저녁 메뉴 맛있는 걸로 고르기</span></h1>
+    <p class="eyebrow">요알못 나혼산 · 오늘도 맛있게 먹자!</p>
+    <h1><span class="mark">맛있는 메뉴 고르기</span></h1>
     <p class="lead">최근 메뉴를 적고, 랜덤으로 저녁 메뉴 추천받기</p>
     <div class="table" aria-hidden="true">
       <span class="chr" data-chr="avocado"></span>
@@ -226,7 +226,7 @@
     </div>
 
     <p class="sub-title">최근 며칠간 먹은 메뉴를 고르세요</p>
-    <p class="hint"><strong style="color:var(--ink)">입력 없이 다음으로 넘어가도 돼요.</strong><br>기억나는 것만 적어주세요. 적은 메뉴는 추천에서 제외됩니다.</p>
+    <p class="hint"><strong style="color:var(--ink)">입력 없이 다음으로 넘어가도 돼요.</strong><br>기억나는 것만 적어주세요. 적은 메뉴는 추천에서 제외됩니다.<br>추천받아 먹었다고 확인한 메뉴는 해당 칸에 자동으로 채워져요.</p>
     <label class="field"><span class="slot-label" data-slot="0">1. 오늘 점심</span>
       <input type="text" maxlength="50" placeholder="먹은 메뉴 (예: 마라탕)" autocomplete="off" enterkeyhint="next">
     </label>
@@ -238,6 +238,7 @@
     </label>
     <p class="hint" style="margin-top:12px">입력한 내용은 이 기기 기록으로 저장해서 지금까지 먹은 메뉴 1~5위로 정리해요.</p>
     <button id="next1" class="btn btn-main" type="button" data-go="1" style="width:100%;margin-top:12px">다음: 고르기</button>
+    <button class="btn btn-ghost" type="button" data-view="ranks" style="width:100%;margin-top:10px">누적 보기</button>
   </section>
 
   <section id="step2" class="step has-peek tint-tomato" aria-labelledby="s2" hidden>
@@ -447,6 +448,8 @@
       el.parentNode.querySelector('input').value = ''; // 끼니가 바뀌면 직전 3끼도 달라지므로 비움
     });
     document.querySelectorAll('.meal-word').forEach(function (el) { el.textContent = meal; });
+    window.__mealNow = meal;
+    if (window.__afterMeal) window.__afterMeal(meal); // 먹었다고 확인한 메뉴를 해당 칸에 자동으로 채움
   }
   mealBtns.forEach(function (b) {
     b.addEventListener('click', function () {
@@ -593,7 +596,28 @@
   // 1단계: 적은 메뉴 저장 (목록에 없는 메뉴는 이름 그대로, 분야는 '기타'로 기록)
   var recent = [];
   var lastSaved = {};
-  document.querySelectorAll('[data-meal]').forEach(function (b) { b.addEventListener('click', function () { lastSaved = {}; }); });
+  // 먹었다고 확인한 추천 메뉴는 직전 3끼 칸에 자동으로 입력됨 (고른 식사와 날짜가 맞는 칸에만)
+  var eaten = lsJson('eatpick.eaten', []);
+  if (!Array.isArray(eaten)) eaten = [];
+  function ymd(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+  function daysAgo(str) {
+    var a = new Date(); a.setHours(0, 0, 0, 0);
+    var p = String(str).split('-'), b = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    return Math.round((a - b) / 86400000);
+  }
+  eaten = eaten.filter(function (e) { return e && e.name && e.date && daysAgo(e.date) <= 2; }); // 이틀 지난 기록은 정리
+  lsSet('eatpick.eaten', JSON.stringify(eaten));
+  var SLOTS = { '저녁': [[0, '점심'], [0, '아침'], [1, '저녁']], '점심': [[0, '아침'], [1, '저녁'], [1, '점심']], '아침': [[1, '저녁'], [1, '점심'], [1, '아침']] }; // [며칠 전, 식사]
+  function fillEaten() {
+    var meal = window.__mealNow, inputs = document.querySelectorAll('#step1 input');
+    if (!SLOTS[meal]) return;
+    SLOTS[meal].forEach(function (sl, i) {
+      var hit = null;
+      eaten.forEach(function (e) { if (e.meal === sl[1] && daysAgo(e.date) === sl[0]) hit = e; });
+      if (hit && !inputs[i].value) { inputs[i].value = hit.name; lastSaved[i] = hit.name; } // 이미 저장된 기록이라 다시 저장하지 않음
+    });
+  }
+  window.__afterMeal = function (meal) { lastSaved = {}; fillEaten(); };
   $('next1').addEventListener('click', function () {
     var typed = [];
     document.querySelectorAll('#step1 input').forEach(function (inp, idx) {
@@ -723,7 +747,7 @@
     window.__go(3);
     if (window.__burst) window.__burst();
     // 바로 순위에 넣지 않고, 다음에 접속했을 때 먹었는지 확인한 뒤에 넣음
-    pendings.push({ name: name, category: meta.category, at: Date.now() });
+    pendings.push({ name: name, category: meta.category, at: Date.now(), meal: window.__mealNow || '저녁', date: ymd(new Date()) });
     pendings = pendings.slice(-10);
     lsSet('eatpick.pendings', JSON.stringify(pendings));
     $('win-note').textContent = '다시 접속하면 먹었는지 꼭 물어볼게요.';
@@ -799,6 +823,7 @@
     $('fav-chance').textContent = '최애 메뉴가 뽑힐 확률: 약 16.7% (🎲 랜덤 추천 한 번 기준)' + (n ? ' · 최애 ' + n + '개 중 하나당 약 ' + (100 / 6 / n).toFixed(1) + '%' : '');
   }
   favHint();
+  window.__afterMeal(window.__mealNow || '저녁');
   // 7-(1) 보조: 뽑힌 메뉴가 아니어도 최애 메뉴를 직접 등록
   $('fav-form').addEventListener('submit', function (e) {
     e.preventDefault();
@@ -874,8 +899,15 @@
     if (ate) row.rating = stars;
     var item = current;
     return insert('feedback', [row]).then(function () {
-      // 먹었다(YES)+별점까지 남긴 선택만 순위에 들어감. 순위 기록은 맨 마지막에 한 번만 넣어서, 중간에 실패해 다시 눌러도 두 번 세지 않음
-      if (ate) return insert('meals', [{ device_id: did, menu_name: item.name, category: item.category, source: 'pick' }]);
+      // 먹었다(YES)+별점까지 남긴 선택만 유효한 데이터. 순위용 '선택' 기록과 '먹은 메뉴' 입력 기록을 한 번에 넣어서, 중간에 실패해도 두 번 세지 않음
+      if (ate) return insert('meals', [
+        { device_id: did, menu_name: item.name, category: item.category, source: 'pick' },
+        { device_id: did, menu_name: item.name, category: item.category, source: 'input' }
+      ]).then(function () {
+        eaten.push({ name: item.name, meal: item.meal || '저녁', date: item.date || ymd(new Date(item.at)) });
+        lsSet('eatpick.eaten', JSON.stringify(eaten.slice(-12)));
+        fillEaten();
+      });
     });
   }
   $('fb-yes').addEventListener('click', function () { choice = 'yes'; fbSay(''); fbRender(); });
