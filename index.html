@@ -417,6 +417,14 @@
       <button id="fb-yes" class="btn btn-ghost" type="button" aria-pressed="false">YES 먹었어요</button>
       <button id="fb-no" class="btn btn-ghost" type="button" aria-pressed="false">NO 안 먹었어요</button>
     </div>
+    <div id="fb-mealrow" hidden>
+      <p style="margin:16px 0 8px;font-weight:700;text-align:center">어느 끼니에 먹었나요?</p>
+      <div class="chips" role="group" aria-label="먹은 끼니" style="justify-content:center;margin-top:0">
+        <button class="chip" type="button" data-ate="아침" aria-pressed="false">아침</button>
+        <button class="chip" type="button" data-ate="점심" aria-pressed="false">점심</button>
+        <button class="chip" type="button" data-ate="저녁" aria-pressed="false">저녁</button>
+      </div>
+    </div>
     <div id="fb-rate" hidden>
       <p style="margin:16px 0 0;font-weight:700;text-align:center">메뉴 만족도를 별로 남겨 주세요</p>
       <div class="stars" role="radiogroup" aria-label="만족도 별 1개에서 5개">
@@ -909,7 +917,7 @@
       lsSet('eatpick.customs', JSON.stringify(customs)); syncProfile();
       $('am-name').value = '';
       say(name + josa(name, '을', '를') + ' ' + cat + '에 추가했어요. 이 기기에서 ' + cat + '과 랜덤 추천에 나와요.', 'ok');
-      insert('inquiries', [{ kind: '메뉴 추가 요청', menu_name: name.slice(0, 50), category: cat }]).catch(function () {});
+      insert('menu_additions', [{ device_id: did, menu_name: name.slice(0, 50), category: cat }]).catch(function () {});
     });
   });
 
@@ -918,12 +926,15 @@
   var oldPending = lsJson('eatpick.pending', null); // 예전 방식으로 저장된 대기 항목이 있으면 옮겨 둠
   if (oldPending && oldPending.name) { pendings.push(oldPending); lsSet('eatpick.pendings', JSON.stringify(pendings)); }
   lsSet('eatpick.pending', 'null');
-  var current = null, choice = '', stars = 0, sending = false;
+  var current = null, choice = '', stars = 0, ateMeal = '', sending = false;
   var modal = $('fb-modal');
   function fbSay(t, kind) { var m = $('fb-msg'); m.textContent = t; m.className = 'form-msg' + (kind ? ' ' + kind : ''); m.style.textAlign = 'center'; }
   function fbRender() {
     $('fb-yes').setAttribute('aria-pressed', String(choice === 'yes'));
     $('fb-no').setAttribute('aria-pressed', String(choice === 'no'));
+    var needMeal = !!(current && current.meal === '내일');
+    $('fb-mealrow').hidden = !(choice === 'yes' && needMeal);
+    document.querySelectorAll('#fb-mealrow [data-ate]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-ate') === ateMeal)); });
     $('fb-rate').hidden = (choice !== 'yes');
     document.querySelectorAll('#fb-rate [data-r]').forEach(function (b) {
       var r = Number(b.getAttribute('data-r'));
@@ -931,20 +942,20 @@
       b.setAttribute('aria-checked', String(r === stars));
     });
     $('fb-score').textContent = stars ? stars + '점' : '별을 눌러 주세요';
-    $('fb-ok').disabled = sending || !(choice === 'no' || (choice === 'yes' && stars > 0));
+    $('fb-ok').disabled = sending || !(choice === 'no' || (choice === 'yes' && stars > 0 && (!needMeal || ateMeal)));
   }
   function showFb() {
     current = null; // 먹을 날짜가 아직 안 된 선택(내일 메뉴)은 그날이 되면 물어봄
     for (var i = 0; i < pendings.length; i++) { if (daysAgo(pendings[i].date || ymd(new Date(pendings[i].at))) >= 0) { current = pendings[i]; break; } }
     if (!current) { modal.hidden = true; document.body.classList.remove('modal-open'); return; }
-    choice = ''; stars = 0; sending = false; fbSay('');
+    choice = ''; stars = 0; ateMeal = ''; sending = false; fbSay('');
     $('fb-menu').textContent = info(current.name).emoji + ' ' + current.name;
     modal.hidden = false; document.body.classList.add('modal-open');
     fbRender();
     $('fb-yes').focus();
   }
   function sendFb() {
-    var ate = choice === 'yes';
+    var ate = choice === 'yes', mealAte = ateMeal;
     var row = { device_id: did, menu_name: current.name, category: current.category, ate: ate };
     if (ate) row.rating = stars;
     var item = current;
@@ -954,12 +965,15 @@
         { device_id: did, menu_name: item.name, category: item.category, source: 'pick' },
         { device_id: did, menu_name: item.name, category: item.category, source: 'input' }
       ]).then(function () {
-        eaten.push({ name: item.name, meal: item.meal || '저녁', date: item.date || ymd(new Date(item.at)) });
+        eaten.push({ name: item.name, meal: item.meal === '내일' ? mealAte : (item.meal || '저녁'), date: item.date || ymd(new Date(item.at)) });
         lsSet('eatpick.eaten', JSON.stringify(eaten.slice(-12)));
         fillEaten();
       });
     });
   }
+  document.querySelectorAll('#fb-mealrow [data-ate]').forEach(function (b) {
+    b.addEventListener('click', function () { ateMeal = b.getAttribute('data-ate'); fbSay(''); fbRender(); });
+  });
   $('fb-yes').addEventListener('click', function () { choice = 'yes'; fbSay(''); fbRender(); });
   $('fb-no').addEventListener('click', function () { choice = 'no'; stars = 0; fbSay(''); fbRender(); });
   document.querySelectorAll('#fb-rate [data-r]').forEach(function (b) {
