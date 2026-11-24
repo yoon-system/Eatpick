@@ -774,7 +774,7 @@
     var c = $('wx-chip'), r = wx.mode && WX_RULE[wx.mode];
     c.textContent = (test ? '🧪 ' : '') + icon + ' ' + wxPlace + (temp == null ? '' : ' ' + Math.round(temp) + '°C');
     c.className = 'wx-chip' + (r ? ' on' : '');
-    c.title = (r ? '오늘 날씨에 맞춰 ' + r.label + ' 메뉴를 더 보여드려요. ' : '') + '눌러서 지역을 바꿀 수 있어요';
+    c.title = '눌러서 지역을 바꿀 수 있어요';
   }
   function fetchWx(lat, lon) {
     var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current_weather=true&daily=weathercode,apparent_temperature_max,temperature_2m_max,temperature_2m_min&past_days=1&forecast_days=2&timezone=auto';
