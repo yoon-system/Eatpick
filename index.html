@@ -48,6 +48,7 @@
   .wx-row { display: flex; justify-content: flex-end; margin: -6px 0 10px; min-height: 0; }
   .wx-chip { border: 1.5px solid var(--line); background: #fff; color: var(--ink); border-radius: 999px; padding: 7px 13px; font-size: 13px; font-family: inherit; font-weight: 700; line-height: 1.2; }
   button.wx-chip { cursor: pointer; }
+  .wx-panel { background: #fff; border: 1.5px solid var(--line); border-radius: 16px; padding: 16px; margin: 0 0 14px; box-shadow: 0 6px 18px rgba(120, 80, 20, .12); }
   .wx-chip.on { border-color: #e0a85a; background: #fff6e2; }
   .hero { text-align: center; margin-bottom: 30px; }
   .eyebrow { display: inline-block; font-size: 14px; color: var(--accent-dark); font-weight: 700; margin: 0 0 12px; padding: 5px 14px; background: #fff; border: 1.5px solid var(--yolk); border-radius: 999px; }
@@ -208,7 +209,16 @@
 <body>
 <main>
 <div id="home">
-  <div class="wx-row"><button id="wx-btn" class="wx-chip" type="button" hidden>📍 내 위치 날씨 보기</button><span id="wx-chip" class="wx-chip" role="status" hidden></span></div>
+  <div class="wx-row"><button id="wx-chip" class="wx-chip" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="wx-panel">🌡️ 서울</button></div>
+  <div id="wx-panel" class="wx-panel" role="dialog" aria-label="날씨 지역 설정" hidden>
+    <label class="field"><span>날씨 지역 직접 고르기</span>
+      <select id="wx-city"></select>
+    </label>
+    <button id="wx-gps" class="btn btn-ghost" type="button" style="width:100%;margin-top:12px">📍 내 위치 공유하기</button>
+    <p id="wx-msg" class="form-msg" role="status" aria-live="polite" style="margin:10px 0 0"></p>
+    <p class="hint" style="margin:8px 0 0">위치는 날씨를 가져오는 데만 쓰고 저장하거나 서버로 보내지 않아요. 기본은 서울이에요.</p>
+    <button id="wx-close" class="linkbtn" type="button" style="display:block;margin:10px auto 0">닫기</button>
+  </div>
   <header class="hero">
     <p class="eyebrow">요알못 나혼산 · 오늘도 맛있게 먹자!</p>
     <h1><span class="mark">맛있는 메뉴 고르기</span></h1>
@@ -724,12 +734,12 @@
     if (code >= 71 && code <= 77 || code === 85 || code === 86) return '🌨️';
     if (code >= 95) return '⛈️'; if (RAIN_CODES.indexOf(code) >= 0) return '🌧️'; return '🌡️';
   }
+  var wxPlace = '서울';
   function showWx(icon, temp, test) {
     var c = $('wx-chip'), r = wx.mode && WX_RULE[wx.mode];
-    c.textContent = (test ? '🧪 ' : '') + icon + (temp == null ? '' : ' ' + Math.round(temp) + '°C') + (r ? ' · ' + r.label : '');
+    c.textContent = (test ? '🧪 ' : '') + icon + ' ' + wxPlace + (temp == null ? '' : ' ' + Math.round(temp) + '°C') + (r ? ' · ' + r.label : '');
     c.className = 'wx-chip' + (r ? ' on' : '');
-    c.title = r ? '오늘 날씨에 맞춰 ' + r.label + ' 메뉴를 더 보여드려요' : '오늘 날씨';
-    c.hidden = false; $('wx-btn').hidden = true;
+    c.title = (r ? '오늘 날씨에 맞춰 ' + r.label + ' 메뉴를 더 보여드려요. ' : '') + '눌러서 지역을 바꿀 수 있어요';
   }
   function fetchWx(lat, lon) {
     var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current_weather=true&daily=weathercode,apparent_temperature_max,temperature_2m_max,temperature_2m_min&past_days=1&forecast_days=2&timezone=auto';
@@ -749,21 +759,51 @@
       showWx(wx.mode === 'cold' ? '❄️' : wx.mode === 'chilly' ? '🍂' : wxIcon(wx.mode === 'rain' ? wc : cw.weathercode), cw.temperature, false);
     });
   }
-  function askLocation() {
-    var b = $('wx-btn');
-    if (!navigator.geolocation) { b.hidden = true; return; }
-    b.disabled = true; b.textContent = '📍 위치 확인 중…';
-    navigator.geolocation.getCurrentPosition(function (pos) {
-      lsSet('eatpick.wx', '1');
-      // 위치는 소수 둘째 자리(약 1km)까지만 날씨 조회에 쓰고, 저장하거나 서버에 보내지 않음
-      fetchWx(pos.coords.latitude.toFixed(2), pos.coords.longitude.toFixed(2)).catch(function () { b.disabled = false; b.textContent = '📍 날씨를 못 가져왔어요 · 다시 시도'; b.hidden = false; });
-    }, function () { lsSet('eatpick.wx', '0'); b.disabled = false; b.textContent = '📍 위치를 허용하면 날씨가 보여요'; b.hidden = false; }, { timeout: 8000, maximumAge: 3600000 });
+  // 기본 지역은 서울. 칩을 누르면 지역을 직접 고르거나 내 위치를 공유할 수 있음
+  var WX_CITIES = [['서울', 37.57, 126.98], ['부산', 35.18, 129.08], ['인천', 37.46, 126.71], ['대구', 35.87, 128.60], ['광주', 35.16, 126.85], ['대전', 36.35, 127.38], ['울산', 35.54, 129.31], ['세종', 36.48, 127.29], ['수원', 37.26, 127.03], ['춘천', 37.88, 127.73], ['강릉', 37.75, 128.88], ['청주', 36.64, 127.49], ['전주', 35.82, 127.15], ['포항', 36.02, 129.34], ['목포', 34.81, 126.39], ['제주', 33.50, 126.53]];
+  var wxSel = $('wx-city'), wxMsg = $('wx-msg'), wxPanel = $('wx-panel'), wxChip = $('wx-chip'), wxTest = false;
+  function wxSay(t, k) { wxMsg.textContent = t; wxMsg.className = 'form-msg' + (k ? ' ' + k : ''); }
+  WX_CITIES.forEach(function (c) { var o = document.createElement('option'); o.value = c[0]; o.textContent = c[0]; wxSel.appendChild(o); });
+  function loadPlace(name, lat, lon) {
+    wxPlace = name; wx.mode = null;
+    wxChip.textContent = '🌡️ ' + name + ' …';
+    return fetchWx(lat, lon).catch(function () { wxChip.textContent = '🌡️ ' + name + ' · 날씨를 못 가져왔어요'; wxSay('날씨를 가져오지 못했어요. 잠시 뒤 다시 시도해 주세요.', 'err'); });
   }
-  $('wx-btn').addEventListener('click', askLocation);
+  function loadCity(name) {
+    var c = WX_CITIES.filter(function (x) { return x[0] === name; })[0] || WX_CITIES[0];
+    wxSel.value = c[0]; lsSet('eatpick.wxloc', c[0]);
+    return loadPlace(c[0], c[1].toFixed(2), c[2].toFixed(2));
+  }
+  function shareLocation(auto) {
+    if (!navigator.geolocation) { wxSay('이 브라우저에서는 위치를 쓸 수 없어요. 지역을 직접 골라 주세요.', 'err'); return; }
+    var b = $('wx-gps'); b.disabled = true; if (!auto) wxSay('위치를 확인하는 중…', '');
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      b.disabled = false; wxSay('', ''); lsSet('eatpick.wxloc', 'gps');
+      // 위치는 소수 둘째 자리(약 1km)까지만 날씨 조회에 쓰고, 저장하거나 서버에 보내지 않음
+      loadPlace('내 위치', pos.coords.latitude.toFixed(2), pos.coords.longitude.toFixed(2));
+      wxPanel.hidden = true; wxChip.setAttribute('aria-expanded', 'false');
+    }, function () {
+      b.disabled = false;
+      if (auto) { loadCity('서울'); return; }
+      wxSay('위치를 가져오지 못했어요. 위치 허용을 확인하거나 지역을 직접 골라 주세요.', 'err');
+    }, { timeout: 8000, maximumAge: 3600000 });
+  }
+  wxChip.addEventListener('click', function () {
+    wxPanel.hidden = !wxPanel.hidden; wxChip.setAttribute('aria-expanded', String(!wxPanel.hidden));
+    if (!wxPanel.hidden) wxSel.focus();
+  });
+  $('wx-close').addEventListener('click', function () { wxPanel.hidden = true; wxChip.setAttribute('aria-expanded', 'false'); wxChip.focus(); });
+  wxSel.addEventListener('change', function () { wxSay('', ''); loadCity(wxSel.value); wxPanel.hidden = true; wxChip.setAttribute('aria-expanded', 'false'); });
+  $('wx-gps').addEventListener('click', function () { shareLocation(false); });
   (function () {
     var t = (location.search.match(/[?&]wx=(rain|heat|cold|chilly)/) || [])[1]; // 시험용: ?wx=rain, heat, cold, chilly 로 날씨를 가정
-    if (t) { wx.mode = t; showWx(t === 'heat' ? '☀️' : (t === 'cold' ? '❄️' : (t === 'chilly' ? '🍂' : '🌧️')), t === 'heat' ? 34 : (t === 'cold' ? -13 : (t === 'chilly' ? 3 : 12)), true); return; }
-    if (lsGet('eatpick.wx') === '1') askLocation(); else $('wx-btn').hidden = false;
+    if (t) { wxTest = true; wx.mode = t; showWx(t === 'heat' ? '☀️' : (t === 'cold' ? '❄️' : (t === 'chilly' ? '🍂' : '🌧️')), t === 'heat' ? 34 : (t === 'cold' ? -13 : (t === 'chilly' ? 3 : 12)), true); return; }
+    var saved = lsGet('eatpick.wxloc');
+    if (saved === 'gps') { // 전에 위치를 공유했고 지금도 허용 상태일 때만 자동으로. 아니면 서울
+      if (navigator.permissions && navigator.permissions.query) {
+        navigator.permissions.query({ name: 'geolocation' }).then(function (st) { if (st.state === 'granted') shareLocation(true); else loadCity('서울'); }, function () { loadCity('서울'); });
+      } else loadCity('서울');
+    } else loadCity(saved || '서울');
   })();
   function binom(n, p) { var k = 0; for (var i = 0; i < n; i++) if (Math.random() < p) k++; return k; }
   function hasTag(name, tag) { // tag는 문자열 하나 또는 여러 개(하나라도 있으면 해당)
