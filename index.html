@@ -710,11 +710,11 @@
   // 오늘 날씨: 오른쪽 위에 보여주고, 비 오는 날은 따뜻한 국물, 폭염은 시원한 음식을 첫 추천에서 더 많이 보여줌
   //   카드 하나하나가 그런 메뉴일 확률: 비 50%, 폭염 75%. 분야를 고른 뒤 처음 나오는 4개에만 적용하고, '다시 뽑기'는 평소대로.
   var wx = { mode: null };
-  var WX_RULE = { rain: { tag: 'soup', p: 0.5, label: '따뜻한 국물', line: '비 오는 날이라 따뜻한 국물 메뉴를 더 넣었어요. ' }, heat: { tag: 'cool', p: 0.75, label: '시원한 음식', line: '더운 날이라 시원한 메뉴를 더 넣었어요. ' } };
+  var WX_RULE = { rain: { tag: 'soup', p: 0.5, label: '따뜻한 국물', line: '비 오는 날이라 따뜻한 국물 메뉴를 더 넣었어요. ' }, heat: { tag: 'cool', p: 0.75, label: '시원한 음식', line: '더운 날이라 시원한 메뉴를 더 넣었어요. ' }, cloud: { dessert: true, label: '달달한 디저트', line: '흐린 날이라 달달한 디저트를 하나 넣었어요. ' } };
   var RAIN_CODES = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99];
   var HEAT_FEEL = 33; // 기상청 폭염주의보 기준(일 최고 체감온도 33°C)을 하루 단위로 적용
   function wxIcon(code) {
-    if (code === 0) return '☀️'; if (code <= 3) return '⛅'; if (code === 45 || code === 48) return '🌫️';
+    if (code === 0) return '☀️'; if (code === 3) return '☁️'; if (code <= 3) return '⛅'; if (code === 45 || code === 48) return '🌫️';
     if (code >= 71 && code <= 77 || code === 85 || code === 86) return '🌨️';
     if (code >= 95) return '⛈️'; if (RAIN_CODES.indexOf(code) >= 0) return '🌧️'; return '🌡️';
   }
@@ -730,8 +730,8 @@
     return fetch(url).then(function (r) { if (!r.ok) throw new Error('http'); return r.json(); }).then(function (d) {
       var cw = d.current_weather, dc = d.daily && d.daily.weathercode && d.daily.weathercode[0], fm = d.daily && d.daily.apparent_temperature_max && d.daily.apparent_temperature_max[0];
       if (!cw || typeof cw.temperature !== 'number') throw new Error('bad');
-      wx.mode = (typeof fm === 'number' && fm >= HEAT_FEEL) ? 'heat' : (RAIN_CODES.indexOf(dc) >= 0 ? 'rain' : null);
-      showWx(wxIcon(wx.mode === 'rain' ? dc : cw.weathercode), cw.temperature, false);
+      wx.mode = (typeof fm === 'number' && fm >= HEAT_FEEL) ? 'heat' : (RAIN_CODES.indexOf(dc) >= 0 ? 'rain' : (dc === 3 ? 'cloud' : null));
+      showWx(wxIcon(wx.mode === 'rain' ? dc : (wx.mode === 'cloud' ? 3 : cw.weathercode)), cw.temperature, false);
     });
   }
   function askLocation() {
@@ -746,10 +746,14 @@
   }
   $('wx-btn').addEventListener('click', askLocation);
   (function () {
-    var t = (location.search.match(/[?&]wx=(rain|heat)/) || [])[1]; // 시험용: ?wx=rain 또는 ?wx=heat 로 날씨를 가정
-    if (t) { wx.mode = t; showWx(t === 'heat' ? '☀️' : '🌧️', t === 'heat' ? 34 : 12, true); return; }
+    var t = (location.search.match(/[?&]wx=(rain|heat|cloud)/) || [])[1]; // 시험용: ?wx=rain, ?wx=heat, ?wx=cloud 로 날씨를 가정
+    if (t) { wx.mode = t; showWx(t === 'heat' ? '☀️' : (t === 'cloud' ? '☁️' : '🌧️'), t === 'heat' ? 34 : (t === 'cloud' ? 15 : 12), true); return; }
     if (lsGet('eatpick.wx') === '1') askLocation(); else $('wx-btn').hidden = false;
   })();
+  function dessertPick(exclude) { // 흐린 날: 달달한 디저트 하나 (이미 적은 메뉴는 제외)
+    var l = (MENUS || []).filter(function (m) { return (m.tags || []).indexOf('dessert') >= 0 && recent.indexOf(m.name) < 0 && (exclude || []).indexOf(m.name) < 0; }).map(function (m) { return m.name; });
+    return l.length ? l[Math.floor(Math.random() * l.length)] : null;
+  }
   function binom(n, p) { var k = 0; for (var i = 0; i < n; i++) if (Math.random() < p) k++; return k; }
   function hasTag(name, tag) {
     for (var i = 0; MENUS && i < MENUS.length; i++) if (MENUS[i].name === name) return (MENUS[i].tags || []).indexOf(tag) >= 0;
@@ -773,16 +777,17 @@
   function drawRandom(exclude, plan) {
     var favOk = pool('랜덤').filter(function (m) { return favs.indexOf(m) >= 0 && exclude.indexOf(m) < 0; });
     var fav = (favOk.length && Math.random() < favChance(favOk.length)) ? favOk[Math.floor(Math.random() * favOk.length)] : null;
-    var slots = fav ? 3 : 4, wc = [], tagged = [];
-    if (plan) {
+    var dessert = (plan && plan.dessert) ? dessertPick(exclude) : null;
+    var slots = (fav ? 3 : 4) - (dessert ? 1 : 0), wc = [], tagged = [];
+    if (plan && plan.tag) {
       tagged = pool('랜덤').filter(function (m) { return hasTag(m, plan.tag); });
       var tg = tagged.filter(function (m) { return exclude.indexOf(m) < 0 && favs.indexOf(m) < 0; });
       wc = shuffle(tg).slice(0, Math.min(binom(slots, plan.p), tg.length)); // 날씨에 맞는 카드
     }
     var rest = drawBalanced(slots - wc.length, exclude.concat(tagged)); // 나머지는 날씨 메뉴가 아닌 것 중에서 분야별로 고르게
     if (rest.length < slots - wc.length) rest = drawBalanced(slots - wc.length, exclude.concat(wc));
-    wxApplied = wc.length > 0;
-    return shuffle((fav ? [fav] : []).concat(wc, rest));
+    wxApplied = wc.length > 0 || !!dessert;
+    return shuffle((fav ? [fav] : []).concat(dessert ? [dessert] : [], wc, rest));
   }
   var wxApplied = false;
   var currentCat = '';
@@ -812,7 +817,10 @@
       var fresh = again ? all.filter(function (n) { return lastShown.indexOf(n) < 0; }) : all;
       var rest = all.filter(function (n) { return fresh.indexOf(n) < 0; });
       chosen = shuffle(fresh).concat(shuffle(rest)).slice(0, 4);
-      if (plan) {
+      if (plan && plan.dessert) {
+        var ds = dessertPick(); // 흐린 날: 4개 중 하나를 디저트로
+        if (ds) { chosen = shuffle(chosen.filter(function (n) { return hasTag(n, 'dessert') === false; }).slice(0, 3).concat([ds])); wxApplied = true; }
+      } else if (plan) {
         var tg2 = all.filter(function (n) { return hasTag(n, plan.tag); });
         var wcs = shuffle(tg2).slice(0, Math.min(binom(4, plan.p), tg2.length));
         var others = shuffle(all.filter(function (n) { return tg2.indexOf(n) < 0; }));
