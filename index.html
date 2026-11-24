@@ -45,7 +45,16 @@
   main { max-width: 640px; margin: 0 auto; padding: 24px 20px calc(48px + env(safe-area-inset-bottom)); }
 
   /* 머리말과 식탁 */
-  .wx-row { display: flex; justify-content: flex-end; margin: -6px 0 10px; min-height: 0; }
+  .wx-row { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin: -6px 0 10px; min-height: 0; }
+  .ico-btn { width: 34px; height: 34px; flex: none; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 1.5px solid var(--line); background: #fff; color: var(--ink); border-radius: 50%; cursor: pointer; }
+  .ico-btn svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .st-sel { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; padding: 0; list-style: none; }
+  .st-sel li { display: inline-flex; align-items: center; gap: 4px; background: #fff6e2; border: 1.5px solid #e0a85a; border-radius: 999px; padding: 4px 6px 4px 12px; font-size: 14px; font-weight: 700; }
+  .st-sel button { border: 0; background: transparent; font-size: 16px; line-height: 1; padding: 4px 6px; cursor: pointer; color: var(--sub); font-family: inherit; }
+  .st-res { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+  .st-res label { display: flex; align-items: center; gap: 10px; background: #fff; border: 1.5px solid var(--line); border-radius: 12px; padding: 11px 12px; font-size: 16px; cursor: pointer; }
+  .st-res input { width: 20px; height: 20px; flex: none; accent-color: var(--accent); }
+  .st-res .cat-tag { margin-left: auto; font-size: 13px; color: var(--sub); }
   .wx-chip { border: 1.5px solid var(--line); background: #fff; color: var(--ink); border-radius: 999px; padding: 7px 13px; font-size: 13px; font-family: inherit; font-weight: 700; line-height: 1.2; }
   button.wx-chip { cursor: pointer; }
   .wx-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -212,7 +221,9 @@
 <body>
 <main>
 <div id="home">
-  <div class="wx-row"><button id="wx-chip" class="wx-chip" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="wx-panel">🌡️ 서울</button></div>
+  <div class="wx-row"><button id="wx-chip" class="wx-chip" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="wx-panel">🌡️ 서울</button>
+    <button class="ico-btn" type="button" data-view="inquiry" aria-label="문의하기" title="문의하기"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M9.2 9.3a2.9 2.9 0 0 1 5.6 1c0 1.9-2.8 2.4-2.8 4"/><circle cx="12" cy="17.4" r=".6" fill="currentColor"/></svg></button>
+    <button id="st-open" class="ico-btn" type="button" data-view="settings" aria-label="설정" title="설정"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg></button></div>
   <div id="wx-panel" class="wx-panel" role="dialog" aria-label="날씨 지역 설정" hidden>
     <div class="wx-tabs" role="group" aria-label="지역 정하는 방법">
       <button id="wx-tab-pick" class="btn btn-ghost" type="button" aria-pressed="false">지역 직접 설정</button>
@@ -383,6 +394,21 @@
   <button class="btn btn-ghost" type="button" data-view="home" style="width:100%">← 돌아가기</button>
 </div>
 
+<div id="settings-view" hidden>
+  <button class="btn btn-ghost" type="button" data-view="home" style="width:100%;margin-bottom:16px">← 돌아가기</button>
+  <section class="tint-coffee" aria-labelledby="s-st">
+    <h2 id="s-st">설정</h2>
+    <h3 style="font-size:17px;margin:14px 0 4px">못 먹거나 싫어하는 음식</h3>
+    <p class="hint">검색해서 체크하면 추천에서 빠져요. 체크를 풀면 다시 나와요. 내 코드에 묶여 저장돼서, 같은 코드를 쓰는 다른 기기에서도 같아요.</p>
+    <label class="field"><span>메뉴 검색</span><input id="st-q" type="search" placeholder="예: 곱창, 회, 오이" autocomplete="off"></label>
+    <ul id="st-res" class="st-res" aria-live="polite"></ul>
+    <p id="st-none" class="hint" style="margin:10px 0 0" hidden></p>
+    <h3 style="font-size:15px;margin:18px 0 0">체크한 음식 <span id="st-count"></span></h3>
+    <ul id="st-sel" class="st-sel"></ul>
+    <p id="st-empty" class="hint" style="margin:8px 0 0">아직 없어요.</p>
+  </section>
+</div>
+
 <div id="inquiry-view" hidden>
   <button class="btn btn-ghost" type="button" data-view="home" style="width:100%;margin-bottom:16px">← 돌아가기</button>
   <section class="has-peek tint-coffee" aria-labelledby="s6">
@@ -540,7 +566,7 @@
     }
   };
   setMeal('저녁');
-  var views = { home: document.getElementById('home'), ranks: document.getElementById('ranks-view'), inquiry: document.getElementById('inquiry-view') };
+  var views = { home: document.getElementById('home'), ranks: document.getElementById('ranks-view'), inquiry: document.getElementById('inquiry-view'), settings: document.getElementById('settings-view') };
   function showView(name) { // 첫 화면, 누적 보기, 문의 남기기 전환
     Object.keys(views).forEach(function (k) { views[k].hidden = (k !== name); });
     window.scrollTo(0, 0);
@@ -596,6 +622,8 @@
   if (!Array.isArray(pendings)) pendings = [];
   var favs = lsJson('eatpick.favs', []);       // 최애 메뉴 이름 목록
   if (!Array.isArray(favs)) favs = [];
+  var dislikes = lsJson('eatpick.dislikes', []); // 못 먹거나 싫어하는 메뉴 이름 목록 (추천에서 제외)
+  if (!Array.isArray(dislikes)) dislikes = [];
 
   var MENUS = null;
   var menusP = api('/menus?select=category,name,aliases,emoji,tags').then(function (m) { MENUS = m; return m; }).catch(function () { return null; });
@@ -603,7 +631,7 @@
   // 최애 메뉴와 추가한 메뉴를 코드에 묶어 서버에 저장 (다른 기기에서 불러올 수 있게)
   var syncT = null;
   function pushProfile() {
-    return api('/rpc/save_profile', { method: 'POST', body: JSON.stringify({ p_code: did, p_data: { favs: favs, customs: customs } }), prefer: 'return=minimal' });
+    return api('/rpc/save_profile', { method: 'POST', body: JSON.stringify({ p_code: did, p_data: { favs: favs, customs: customs, dislikes: dislikes } }), prefer: 'return=minimal' });
   }
   var edits = 0;
   function syncProfile() { edits++; clearTimeout(syncT); syncT = setTimeout(function () { pushProfile().catch(function () {}); }, 600); }
@@ -877,7 +905,7 @@
     var list = [];
     (MENUS || []).forEach(function (m) { if ((cat === '랜덤' || m.category === cat) && list.indexOf(m.name) < 0) list.push(m.name); });
     Object.keys(customs).forEach(function (n) { if ((cat === '랜덤' || customs[n] === cat) && list.indexOf(n) < 0) list.push(n); });
-    return list.filter(function (n) { return recent.indexOf(n) < 0; });
+    return list.filter(function (n) { return recent.indexOf(n) < 0 && dislikes.indexOf(n) < 0; });
   }
   function renderPicks(again) {
     var ul = $('pick-list'), hint = $('pick-hint');
@@ -1162,8 +1190,9 @@
       Object.keys(customs).forEach(function (n) { delete customs[n]; });
       Object.keys(d.customs).forEach(function (n) { if (CATS.indexOf(d.customs[n]) >= 0) customs[n] = d.customs[n]; });
     }
-    lsSet('eatpick.favs', JSON.stringify(favs)); lsSet('eatpick.customs', JSON.stringify(customs));
-    favHint(); renderFavEdit(); syncFavBtn();
+    if (Array.isArray(d.dislikes)) { dislikes.length = 0; d.dislikes.forEach(function (n) { if (typeof n === 'string') dislikes.push(n); }); }
+    lsSet('eatpick.favs', JSON.stringify(favs)); lsSet('eatpick.customs', JSON.stringify(customs)); lsSet('eatpick.dislikes', JSON.stringify(dislikes));
+    renderSettings(); favHint(); renderFavEdit(); syncFavBtn();
   }
   function pullProfile() {
     var at = edits;
@@ -1190,19 +1219,19 @@
     api('/rpc/load_profile', { method: 'POST', body: JSON.stringify({ p_code: c }) }).then(function (d) {
       loading = false;
       if (!d) { codeNote('없는 코드예요. 코드를 다시 확인해 주세요.', 'err'); return; }
-      found = { code: c, favs: Array.isArray(d.favs) ? d.favs : [], customs: d.customs && typeof d.customs === 'object' ? d.customs : {} };
+      found = { code: c, favs: Array.isArray(d.favs) ? d.favs : [], customs: d.customs && typeof d.customs === 'object' ? d.customs : {}, dislikes: Array.isArray(d.dislikes) ? d.dislikes : [] };
       codeNote('', ''); choice.hidden = false;
     }).catch(function () { loading = false; codeNote('불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.', 'err'); });
   });
-  function finish(f, c, cu, move) {
+  function finish(f, c, cu, move, dl) {
     var old = did, done = function () {
-      lsSet('eatpick.device', f.code); lsSet('eatpick.favs', JSON.stringify(f2)); lsSet('eatpick.customs', JSON.stringify(cu));
+      lsSet('eatpick.device', f.code); lsSet('eatpick.favs', JSON.stringify(f2)); lsSet('eatpick.customs', JSON.stringify(cu)); lsSet('eatpick.dislikes', JSON.stringify(dl));
       lsSet('eatpick.pendings', '[]'); lsSet('eatpick.eaten', '[]');
       codeNote('완료했어요. 화면을 새로 고칠게요.', 'ok');
       setTimeout(function () { location.reload(); }, 700);
     }, f2 = c;
     loading = true; choice.hidden = true; codeNote('처리하는 중…', '');
-    var save = api('/rpc/save_profile', { method: 'POST', body: JSON.stringify({ p_code: f.code, p_data: { favs: f2, customs: cu } }), prefer: 'return=minimal' });
+    var save = api('/rpc/save_profile', { method: 'POST', body: JSON.stringify({ p_code: f.code, p_data: { favs: f2, customs: cu, dislikes: dl } }), prefer: 'return=minimal' });
     (move ? save.then(function () { return api('/rpc/merge_records', { method: 'POST', body: JSON.stringify({ p_from: old, p_to: f.code }), prefer: 'return=minimal' }); }) : save)
       .then(done).catch(function () { loading = false; choice.hidden = false; codeNote('처리하지 못했어요. 잠시 뒤 다시 시도해 주세요.', 'err'); });
   }
@@ -1212,7 +1241,9 @@
     favs.forEach(function (n) { if (fv.indexOf(n) < 0) fv.push(n); });
     for (k in found.customs) cu[k] = found.customs[k];
     for (k in customs) if (!(k in cu)) cu[k] = customs[k];
-    finish(found, fv, cu, true);
+    var dv = found.dislikes.slice();
+    dislikes.forEach(function (n) { if (dv.indexOf(n) < 0) dv.push(n); });
+    finish(found, fv, cu, true, dv);
   });
   // 변경하기(덮어쓰기)를 막아 둔 코드 (코드 자체는 공개 페이지에 적지 않고 해시값만 둠)
   var NO_OVERWRITE = ["55be2137dd7cf87ae6d1c2491cadc99ddacae38779ef963919ffef5613982ec6", "606483e02b991b98ac989ba6210ce09856825f64791d21abd7c301075713ac60"];
@@ -1226,9 +1257,51 @@
     var f = found;
     isLocked(did).then(function (locked) {
       if (locked) { codeNote('본 코드는 다른 코드로 변경(덮어쓰기) 불가능합니다.', 'err'); return; }
-      finish(f, f.favs, f.customs, false);
+      finish(f, f.favs, f.customs, false, f.dislikes);
     });
   });
+
+  // 설정: 못 먹거나 싫어하는 메뉴 검색 후 체크
+  function norm(t) { return String(t).replace(/\s+/g, '').toLowerCase(); }
+  function allMenus() {
+    var seen = {}, out = [];
+    (MENUS || []).forEach(function (m) { if (!seen[m.name]) { seen[m.name] = 1; out.push({ name: m.name, cat: m.category, al: (m.aliases || []).join(' ') }); } });
+    Object.keys(customs).forEach(function (n) { if (!seen[n]) { seen[n] = 1; out.push({ name: n, cat: customs[n], al: '' }); } });
+    return out;
+  }
+  function saveDislikes() { lsSet('eatpick.dislikes', JSON.stringify(dislikes)); syncProfile(); }
+  function setDislike(name, on) {
+    var i = dislikes.indexOf(name);
+    if (on && i < 0) dislikes.push(name); else if (!on && i >= 0) dislikes.splice(i, 1);
+    saveDislikes(); renderSettings();
+  }
+  function renderSettings() {
+    var q = norm($('st-q').value), res = $('st-res'), none = $('st-none'), sel = $('st-sel');
+    res.textContent = ''; none.hidden = true; sel.textContent = '';
+    if (q) {
+      var hit = allMenus().filter(function (m) { return norm(m.name).indexOf(q) >= 0 || norm(m.al).indexOf(q) >= 0; }).slice(0, 30);
+      hit.forEach(function (m) {
+        var li = document.createElement('li'), lb = document.createElement('label'), cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.checked = dislikes.indexOf(m.name) >= 0;
+        cb.addEventListener('change', function () { setDislike(m.name, cb.checked); });
+        var sp = document.createElement('span'); sp.textContent = (info(m.name).emoji || '') + ' ' + m.name;
+        var ct = document.createElement('span'); ct.className = 'cat-tag'; ct.textContent = m.cat;
+        lb.appendChild(cb); lb.appendChild(sp); lb.appendChild(ct); li.appendChild(lb); res.appendChild(li);
+      });
+      if (!hit.length) { none.hidden = false; none.textContent = MENUS ? '검색 결과가 없어요. 다른 말로 찾아 보세요.' : '메뉴를 아직 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.'; }
+    }
+    dislikes.forEach(function (n) {
+      var li = document.createElement('li'), t = document.createElement('span'), x = document.createElement('button');
+      t.textContent = n; x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', n + ' 체크 해제');
+      x.addEventListener('click', function () { setDislike(n, false); });
+      li.appendChild(t); li.appendChild(x); sel.appendChild(li);
+    });
+    $('st-count').textContent = dislikes.length ? '(' + dislikes.length + ')' : '';
+    $('st-empty').hidden = dislikes.length > 0;
+  }
+  $('st-q').addEventListener('input', renderSettings);
+  $('st-open').addEventListener('click', function () { menusP.then(renderSettings); });
+  renderSettings();
 
   // 누적 보기: 내 기록 / 전체 합산 / 나의 최애
   function fill(id, rows) {
