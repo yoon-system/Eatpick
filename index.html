@@ -710,12 +710,14 @@
   // 오늘 날씨: 오른쪽 위에 보여주고, 비 오는 날은 따뜻한 국물, 폭염은 시원한 음식을 첫 추천에서 더 많이 보여줌
   //   카드 하나하나가 그런 메뉴일 확률: 비 50%, 폭염 75%. 분야를 고른 뒤 처음 나오는 4개에만 적용하고, '다시 뽑기'는 평소대로.
   var wx = { mode: null };
-  var WX_RULE = { rain: { tag: 'soup', p: 0.5, label: '따뜻한 국물', line: '비 오는 날이라 따뜻한 국물 메뉴를 더 넣었어요. ' }, heat: { tag: 'cool', p: 0.75, label: '시원한 음식', line: '더운 날이라 시원한 메뉴를 더 넣었어요. ' }, cold: { tag: 'soup', p: 0.5, label: '따뜻한 국물', line: '아주 추운 날이라 따뜻한 국물 메뉴를 더 넣었어요. ' }, chilly: { tag: 'soup', p: 0.25, label: '따뜻한 국물', line: '쌀쌀한 날이라 따뜻한 국물 메뉴를 조금 더 넣었어요. ' }, cloud: { dessert: true, label: '달달한 디저트', line: '흐린 날이라 달달한 디저트를 하나 넣었어요. ' } };
+  var WX_RULE = { rain: { tag: 'soup', p: 0.5, label: '따뜻한 국물', line: '비 오는 날이라 따뜻한 국물 메뉴를 더 넣었어요. ' }, heat: { tag: 'cool', p: 0.75, label: '시원한 음식', line: '폭염이라 시원한 메뉴를 더 넣었어요. ' }, cold: { tag: 'soup', p: 0.5, label: '따뜻한 국물', line: '한파라 따뜻한 국물 메뉴를 더 넣었어요. ' } };
   var RAIN_CODES = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 71, 73, 75, 77, 80, 81, 82, 85, 86, 95, 96, 99]; // 비·눈·소나기·뇌우 (눈도 비와 같은 규칙)
-  var COLD_MIN = -5;   // 오늘 최저기온이 이 값 이하면 한파로 봄
-  var CHILLY_MAX = 10; // 오늘 최고기온이 이 값 이하면 쌀쌀한 날
   var RAIN_MAX = 20;   // 비·눈이어도 오늘 최고기온이 이 값보다 높으면 국물 규칙은 적용하지 않음 (더운 날 비)
-  var HEAT_FEEL = 33; // 기상청 폭염주의보 기준(일 최고 체감온도 33°C)을 하루 단위로 적용
+  // 기상청 특보 기준을 따름
+  //   폭염주의보: 일 최고 체감온도 33°C 이상이 2일 이상 (어제·오늘 또는 오늘·내일)
+  //   한파주의보: (10~4월) 아침 최저기온 -12°C 이하가 2일 이상, 또는 전날보다 10°C 이상 내려 3°C 이하
+  //              (기상청은 '평년보다 3°C 낮음'도 보지만 평년값이 없어 이 조건은 뺐음)
+  var HEAT_FEEL = 33, COLD_ABS = -12, COLD_DROP = 10, COLD_LIMIT = 3;
   function wxIcon(code) {
     if (code === 0) return '☀️'; if (code === 3) return '☁️'; if (code <= 3) return '⛅'; if (code === 45 || code === 48) return '🌫️';
     if (code >= 71 && code <= 77 || code === 85 || code === 86) return '🌨️';
@@ -729,17 +731,21 @@
     c.hidden = false; $('wx-btn').hidden = true;
   }
   function fetchWx(lat, lon) {
-    var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current_weather=true&daily=weathercode,apparent_temperature_max,temperature_2m_max,temperature_2m_min&forecast_days=1&timezone=auto';
+    var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current_weather=true&daily=weathercode,apparent_temperature_max,temperature_2m_max,temperature_2m_min&past_days=1&forecast_days=2&timezone=auto';
     return fetch(url).then(function (r) { if (!r.ok) throw new Error('http'); return r.json(); }).then(function (d) {
-      var cw = d.current_weather, dc = d.daily && d.daily.weathercode && d.daily.weathercode[0], fm = d.daily && d.daily.apparent_temperature_max && d.daily.apparent_temperature_max[0], tmax = d.daily && d.daily.temperature_2m_max && d.daily.temperature_2m_max[0], tmin = d.daily && d.daily.temperature_2m_min && d.daily.temperature_2m_min[0];
+      var cw = d.current_weather, dl = d.daily || {};
       if (!cw || typeof cw.temperature !== 'number') throw new Error('bad');
-      var wet = RAIN_CODES.indexOf(dc) >= 0;
-      // 우선순위: 폭염 > 한파 > 비·눈(선선할 때만) > 흐림 > 쌀쌀
-      wx.mode = (typeof fm === 'number' && fm >= HEAT_FEEL) ? 'heat'
-        : (typeof tmin === 'number' && tmin <= COLD_MIN) ? 'cold'
-        : (wet && !(typeof tmax === 'number' && tmax > RAIN_MAX)) ? 'rain'
-        : (dc === 3 ? 'cloud' : (typeof tmax === 'number' && tmax <= CHILLY_MAX ? 'chilly' : null));
-      showWx(wx.mode === 'cold' ? '❄️' : wx.mode === 'chilly' ? '🍂' : wxIcon(wx.mode === 'rain' ? dc : (wx.mode === 'cloud' ? 3 : cw.weathercode)), cw.temperature, false);
+      // 일별 값: [어제, 오늘, 내일]
+      var wc = (dl.weathercode || [])[1], ap = dl.apparent_temperature_max || [], tx = (dl.temperature_2m_max || [])[1], tn = dl.temperature_2m_min || [];
+      var month = Number(String((dl.time || [])[1] || '').slice(5, 7)), winter = month >= 10 || (month >= 1 && month <= 4);
+      function ge(v, lim) { return typeof v === 'number' && v >= lim; }
+      function le(v, lim) { return typeof v === 'number' && v <= lim; }
+      var heat = ge(ap[1], HEAT_FEEL) && (ge(ap[0], HEAT_FEEL) || ge(ap[2], HEAT_FEEL));
+      var cold = winter && ((le(tn[1], COLD_ABS) && (le(tn[0], COLD_ABS) || le(tn[2], COLD_ABS))) || (typeof tn[0] === 'number' && typeof tn[1] === 'number' && tn[0] - tn[1] >= COLD_DROP && le(tn[1], COLD_LIMIT)));
+      var wet = RAIN_CODES.indexOf(wc) >= 0;
+      // 우선순위: 폭염 > 한파 > 비·눈(선선할 때만)
+      wx.mode = heat ? 'heat' : cold ? 'cold' : (wet && !(typeof tx === 'number' && tx > RAIN_MAX)) ? 'rain' : null;
+      showWx(wx.mode === 'cold' ? '❄️' : wxIcon(wx.mode === 'rain' ? wc : cw.weathercode), cw.temperature, false);
     });
   }
   function askLocation() {
@@ -754,14 +760,10 @@
   }
   $('wx-btn').addEventListener('click', askLocation);
   (function () {
-    var t = (location.search.match(/[?&]wx=(rain|heat|cloud|cold|chilly)/) || [])[1]; // 시험용: ?wx=rain, heat, cloud, cold, chilly 로 날씨를 가정
-    if (t) { wx.mode = t; showWx(t === 'heat' ? '☀️' : (t === 'cloud' ? '☁️' : (t === 'cold' ? '❄️' : (t === 'chilly' ? '🍂' : '🌧️'))), t === 'heat' ? 34 : (t === 'cloud' ? 15 : (t === 'cold' ? -7 : (t === 'chilly' ? 8 : 12))), true); return; }
+    var t = (location.search.match(/[?&]wx=(rain|heat|cold)/) || [])[1]; // 시험용: ?wx=rain, heat, cold 로 날씨를 가정
+    if (t) { wx.mode = t; showWx(t === 'heat' ? '☀️' : (t === 'cold' ? '❄️' : '🌧️'), t === 'heat' ? 34 : (t === 'cold' ? -13 : 12), true); return; }
     if (lsGet('eatpick.wx') === '1') askLocation(); else $('wx-btn').hidden = false;
   })();
-  function dessertPick(exclude) { // 흐린 날: 달달한 디저트 하나 (이미 적은 메뉴는 제외)
-    var l = (MENUS || []).filter(function (m) { return (m.tags || []).indexOf('dessert') >= 0 && recent.indexOf(m.name) < 0 && (exclude || []).indexOf(m.name) < 0; }).map(function (m) { return m.name; });
-    return l.length ? l[Math.floor(Math.random() * l.length)] : null;
-  }
   function binom(n, p) { var k = 0; for (var i = 0; i < n; i++) if (Math.random() < p) k++; return k; }
   function hasTag(name, tag) { // tag는 문자열 하나 또는 여러 개(하나라도 있으면 해당)
     var want = [].concat(tag);
@@ -786,17 +788,16 @@
   function drawRandom(exclude, plan) {
     var favOk = pool('랜덤').filter(function (m) { return favs.indexOf(m) >= 0 && exclude.indexOf(m) < 0; });
     var fav = (favOk.length && Math.random() < favChance(favOk.length)) ? favOk[Math.floor(Math.random() * favOk.length)] : null;
-    var dessert = (plan && plan.dessert) ? dessertPick(exclude) : null;
-    var slots = (fav ? 3 : 4) - (dessert ? 1 : 0), wc = [], tagged = [];
-    if (plan && plan.tag) {
+    var slots = fav ? 3 : 4, wc = [], tagged = [];
+    if (plan) {
       tagged = pool('랜덤').filter(function (m) { return hasTag(m, plan.tag); });
       var tg = tagged.filter(function (m) { return exclude.indexOf(m) < 0 && favs.indexOf(m) < 0; });
       wc = shuffle(tg).slice(0, Math.min(binom(slots, plan.p), tg.length)); // 날씨에 맞는 카드
     }
     var rest = drawBalanced(slots - wc.length, exclude.concat(tagged)); // 나머지는 날씨 메뉴가 아닌 것 중에서 분야별로 고르게
     if (rest.length < slots - wc.length) rest = drawBalanced(slots - wc.length, exclude.concat(wc));
-    wxApplied = wc.length > 0 || !!dessert;
-    return shuffle((fav ? [fav] : []).concat(dessert ? [dessert] : [], wc, rest));
+    wxApplied = wc.length > 0;
+    return shuffle((fav ? [fav] : []).concat(wc, rest));
   }
   var wxApplied = false;
   var currentCat = '';
@@ -826,10 +827,7 @@
       var fresh = again ? all.filter(function (n) { return lastShown.indexOf(n) < 0; }) : all;
       var rest = all.filter(function (n) { return fresh.indexOf(n) < 0; });
       chosen = shuffle(fresh).concat(shuffle(rest)).slice(0, 4);
-      if (plan && plan.dessert) {
-        var ds = dessertPick(); // 흐린 날: 4개 중 하나를 디저트로
-        if (ds) { chosen = shuffle(chosen.filter(function (n) { return hasTag(n, 'dessert') === false; }).slice(0, 3).concat([ds])); wxApplied = true; }
-      } else if (plan) {
+      if (plan) {
         var tg2 = all.filter(function (n) { return hasTag(n, plan.tag); });
         var wcs = shuffle(tg2).slice(0, Math.min(binom(4, plan.p), tg2.length));
         var others = shuffle(all.filter(function (n) { return tg2.indexOf(n) < 0; }));
