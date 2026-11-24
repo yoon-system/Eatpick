@@ -710,7 +710,7 @@
   // 오늘 날씨: 오른쪽 위에 보여주고, 비 오는 날은 따뜻한 국물, 폭염은 시원한 음식을 첫 추천에서 더 많이 보여줌
   //   카드 하나하나가 그런 메뉴일 확률: 비 50%, 폭염 75%. 분야를 고른 뒤 처음 나오는 4개에만 적용하고, '다시 뽑기'는 평소대로.
   var wx = { mode: null };
-  var WX_RULE = { rain: { tag: 'soup', p: 0.5, label: '따뜻한 국물', line: '비 오는 날이라 따뜻한 국물 메뉴를 더 넣었어요. ' }, heat: { tag: 'cool', p: 0.75, label: '시원한 음식', line: '폭염이라 시원한 메뉴를 더 넣었어요. ' }, cold: { tag: 'soup', p: 0.5, label: '따뜻한 국물', line: '한파라 따뜻한 국물 메뉴를 더 넣었어요. ' } };
+  var WX_RULE = { rain: { tag: 'soup', p: 0.5, label: '따뜻한 국물', line: '비 오는 날이라 따뜻한 국물 메뉴를 더 넣었어요. ' }, heat: { tag: 'cool', p: 0.75, label: '시원한 음식', line: '폭염이라 시원한 메뉴를 더 넣었어요. ' }, cold: { tag: 'soup', p: 0.5, label: '따뜻한 국물', line: '한파라 따뜻한 국물 메뉴를 더 넣었어요. ' }, chilly: { tag: 'soup', p: 0.25, label: '따뜻한 국물', line: '쌀쌀한 아침이라 따뜻한 국물 메뉴를 조금 더 넣었어요. ' } };
   var RAIN_CODES = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 71, 73, 75, 77, 80, 81, 82, 85, 86, 95, 96, 99]; // 비·눈·소나기·뇌우 (눈도 비와 같은 규칙)
   var RAIN_MAX = 20;   // 비·눈이어도 오늘 최고기온이 이 값보다 높으면 국물 규칙은 적용하지 않음 (더운 날 비)
   // 기상청 특보 기준을 따름
@@ -718,6 +718,7 @@
   //   한파주의보: (10~4월) 아침 최저기온 -12°C 이하가 2일 이상, 또는 전날보다 10°C 이상 내려 3°C 이하
   //              (기상청은 '평년보다 3°C 낮음'도 보지만 평년값이 없어 이 조건은 뺐음)
   var HEAT_FEEL = 33, COLD_ABS = -12, COLD_DROP = 10, COLD_LIMIT = 3;
+  var CHILLY_MIN = 0; // 쌀쌀한 날: 한파·비·눈이 아닌 날 중 오늘 아침 최저기온이 이 값 이하 (기상청 기준 아님, 우리가 정한 값)
   function wxIcon(code) {
     if (code === 0) return '☀️'; if (code === 3) return '☁️'; if (code <= 3) return '⛅'; if (code === 45 || code === 48) return '🌫️';
     if (code >= 71 && code <= 77 || code === 85 || code === 86) return '🌨️';
@@ -743,9 +744,9 @@
       var heat = ge(ap[1], HEAT_FEEL) && (ge(ap[0], HEAT_FEEL) || ge(ap[2], HEAT_FEEL));
       var cold = winter && ((le(tn[1], COLD_ABS) && (le(tn[0], COLD_ABS) || le(tn[2], COLD_ABS))) || (typeof tn[0] === 'number' && typeof tn[1] === 'number' && tn[0] - tn[1] >= COLD_DROP && le(tn[1], COLD_LIMIT)));
       var wet = RAIN_CODES.indexOf(wc) >= 0;
-      // 우선순위: 폭염 > 한파 > 비·눈(선선할 때만)
-      wx.mode = heat ? 'heat' : cold ? 'cold' : (wet && !(typeof tx === 'number' && tx > RAIN_MAX)) ? 'rain' : null;
-      showWx(wx.mode === 'cold' ? '❄️' : wxIcon(wx.mode === 'rain' ? wc : cw.weathercode), cw.temperature, false);
+      // 우선순위: 폭염 > 한파 > 비·눈(선선할 때만) > 쌀쌀한 아침
+      wx.mode = heat ? 'heat' : cold ? 'cold' : (wet && !(typeof tx === 'number' && tx > RAIN_MAX)) ? 'rain' : le(tn[1], CHILLY_MIN) ? 'chilly' : null;
+      showWx(wx.mode === 'cold' ? '❄️' : wx.mode === 'chilly' ? '🍂' : wxIcon(wx.mode === 'rain' ? wc : cw.weathercode), cw.temperature, false);
     });
   }
   function askLocation() {
@@ -760,8 +761,8 @@
   }
   $('wx-btn').addEventListener('click', askLocation);
   (function () {
-    var t = (location.search.match(/[?&]wx=(rain|heat|cold)/) || [])[1]; // 시험용: ?wx=rain, heat, cold 로 날씨를 가정
-    if (t) { wx.mode = t; showWx(t === 'heat' ? '☀️' : (t === 'cold' ? '❄️' : '🌧️'), t === 'heat' ? 34 : (t === 'cold' ? -13 : 12), true); return; }
+    var t = (location.search.match(/[?&]wx=(rain|heat|cold|chilly)/) || [])[1]; // 시험용: ?wx=rain, heat, cold, chilly 로 날씨를 가정
+    if (t) { wx.mode = t; showWx(t === 'heat' ? '☀️' : (t === 'cold' ? '❄️' : (t === 'chilly' ? '🍂' : '🌧️')), t === 'heat' ? 34 : (t === 'cold' ? -13 : (t === 'chilly' ? 3 : 12)), true); return; }
     if (lsGet('eatpick.wx') === '1') askLocation(); else $('wx-btn').hidden = false;
   })();
   function binom(n, p) { var k = 0; for (var i = 0; i < n; i++) if (Math.random() < p) k++; return k; }
