@@ -45,6 +45,10 @@
   main { max-width: 640px; margin: 0 auto; padding: 24px 20px calc(48px + env(safe-area-inset-bottom)); }
 
   /* 머리말과 식탁 */
+  .wx-row { display: flex; justify-content: flex-end; margin: -6px 0 10px; min-height: 0; }
+  .wx-chip { border: 1.5px solid var(--line); background: #fff; color: var(--ink); border-radius: 999px; padding: 7px 13px; font-size: 13px; font-family: inherit; font-weight: 700; line-height: 1.2; }
+  button.wx-chip { cursor: pointer; }
+  .wx-chip.on { border-color: #e0a85a; background: #fff6e2; }
   .hero { text-align: center; margin-bottom: 30px; }
   .eyebrow { display: inline-block; font-size: 14px; color: var(--accent-dark); font-weight: 700; margin: 0 0 12px; padding: 5px 14px; background: #fff; border: 1.5px solid var(--yolk); border-radius: 999px; }
   h1 { font-size: 28px; line-height: 1.4; margin: 0 0 10px; letter-spacing: -0.02em; }
@@ -204,6 +208,7 @@
 <body>
 <main>
 <div id="home">
+  <div class="wx-row"><button id="wx-btn" class="wx-chip" type="button" hidden>📍 내 위치 날씨 보기</button><span id="wx-chip" class="wx-chip" role="status" hidden></span></div>
   <header class="hero">
     <p class="eyebrow">요알못 나혼산 · 오늘도 맛있게 먹자!</p>
     <h1><span class="mark">맛있는 메뉴 고르기</span></h1>
@@ -576,7 +581,7 @@
   if (!Array.isArray(favs)) favs = [];
 
   var MENUS = null;
-  var menusP = api('/menus?select=category,name,aliases,emoji').then(function (m) { MENUS = m; return m; }).catch(function () { return null; });
+  var menusP = api('/menus?select=category,name,aliases,emoji,tags').then(function (m) { MENUS = m; return m; }).catch(function () { return null; });
 
   // 최애 메뉴와 추가한 메뉴를 코드에 묶어 서버에 저장 (다른 기기에서 불러올 수 있게)
   var syncT = null;
@@ -702,6 +707,54 @@
   var FAV_MAX = 1 / 6, FAV_AT_ONE = 0.08, FAV_K = FAV_MAX / FAV_AT_ONE - 1;
   function favChance(n) { return n < 1 ? 0 : FAV_MAX * n / (n + FAV_K); }
   window.__favChance = favChance;
+  // 오늘 날씨: 오른쪽 위에 보여주고, 비 오는 날은 따뜻한 국물, 폭염은 시원한 음식을 첫 추천에서 더 많이 보여줌
+  //   카드 하나하나가 그런 메뉴일 확률: 비 50%, 폭염 75%. 분야를 고른 뒤 처음 나오는 4개에만 적용하고, '다시 뽑기'는 평소대로.
+  var wx = { mode: null };
+  var WX_RULE = { rain: { tag: 'soup', p: 0.5, label: '따뜻한 국물', line: '비 오는 날이라 따뜻한 국물 메뉴를 더 넣었어요. ' }, heat: { tag: 'cool', p: 0.75, label: '시원한 음식', line: '더운 날이라 시원한 메뉴를 더 넣었어요. ' } };
+  var RAIN_CODES = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99];
+  var HEAT_FEEL = 33; // 기상청 폭염주의보 기준(일 최고 체감온도 33°C)을 하루 단위로 적용
+  function wxIcon(code) {
+    if (code === 0) return '☀️'; if (code <= 3) return '⛅'; if (code === 45 || code === 48) return '🌫️';
+    if (code >= 71 && code <= 77 || code === 85 || code === 86) return '🌨️';
+    if (code >= 95) return '⛈️'; if (RAIN_CODES.indexOf(code) >= 0) return '🌧️'; return '🌡️';
+  }
+  function showWx(icon, temp, test) {
+    var c = $('wx-chip'), r = wx.mode && WX_RULE[wx.mode];
+    c.textContent = (test ? '🧪 ' : '') + icon + (temp == null ? '' : ' ' + Math.round(temp) + '°C') + (r ? ' · ' + r.label : '');
+    c.className = 'wx-chip' + (r ? ' on' : '');
+    c.title = r ? '오늘 날씨에 맞춰 ' + r.label + ' 메뉴를 더 보여드려요' : '오늘 날씨';
+    c.hidden = false; $('wx-btn').hidden = true;
+  }
+  function fetchWx(lat, lon) {
+    var url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat + '&longitude=' + lon + '&current_weather=true&daily=weathercode,apparent_temperature_max&forecast_days=1&timezone=auto';
+    return fetch(url).then(function (r) { if (!r.ok) throw new Error('http'); return r.json(); }).then(function (d) {
+      var cw = d.current_weather, dc = d.daily && d.daily.weathercode && d.daily.weathercode[0], fm = d.daily && d.daily.apparent_temperature_max && d.daily.apparent_temperature_max[0];
+      if (!cw || typeof cw.temperature !== 'number') throw new Error('bad');
+      wx.mode = (typeof fm === 'number' && fm >= HEAT_FEEL) ? 'heat' : (RAIN_CODES.indexOf(dc) >= 0 ? 'rain' : null);
+      showWx(wxIcon(wx.mode === 'rain' ? dc : cw.weathercode), cw.temperature, false);
+    });
+  }
+  function askLocation() {
+    var b = $('wx-btn');
+    if (!navigator.geolocation) { b.hidden = true; return; }
+    b.disabled = true; b.textContent = '📍 위치 확인 중…';
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      lsSet('eatpick.wx', '1');
+      // 위치는 소수 둘째 자리(약 1km)까지만 날씨 조회에 쓰고, 저장하거나 서버에 보내지 않음
+      fetchWx(pos.coords.latitude.toFixed(2), pos.coords.longitude.toFixed(2)).catch(function () { b.disabled = false; b.textContent = '📍 날씨를 못 가져왔어요 · 다시 시도'; b.hidden = false; });
+    }, function () { lsSet('eatpick.wx', '0'); b.disabled = false; b.textContent = '📍 위치를 허용하면 날씨가 보여요'; b.hidden = false; }, { timeout: 8000, maximumAge: 3600000 });
+  }
+  $('wx-btn').addEventListener('click', askLocation);
+  (function () {
+    var t = (location.search.match(/[?&]wx=(rain|heat)/) || [])[1]; // 시험용: ?wx=rain 또는 ?wx=heat 로 날씨를 가정
+    if (t) { wx.mode = t; showWx(t === 'heat' ? '☀️' : '🌧️', t === 'heat' ? 34 : 12, true); return; }
+    if (lsGet('eatpick.wx') === '1') askLocation(); else $('wx-btn').hidden = false;
+  })();
+  function binom(n, p) { var k = 0; for (var i = 0; i < n; i++) if (Math.random() < p) k++; return k; }
+  function hasTag(name, tag) {
+    for (var i = 0; MENUS && i < MENUS.length; i++) if (MENUS[i].name === name) return (MENUS[i].tags || []).indexOf(tag) >= 0;
+    return false;
+  }
   function drawBalanced(n, exclude) { // 5개 분야에서 똑같은 확률로 n개 (같은 메뉴는 한 번만)
     var b = { '한식': [], '양식': [], '일식': [], '중식': [], '분식': [] };
     pool('랜덤').forEach(function (m) {
@@ -717,14 +770,21 @@
     }
     return out;
   }
-  function drawRandom(exclude) {
+  function drawRandom(exclude, plan) {
     var favOk = pool('랜덤').filter(function (m) { return favs.indexOf(m) >= 0 && exclude.indexOf(m) < 0; });
-    if (favOk.length && Math.random() < favChance(favOk.length)) {
-      var fav = favOk[Math.floor(Math.random() * favOk.length)];
-      return shuffle([fav].concat(drawBalanced(3, exclude)));
+    var fav = (favOk.length && Math.random() < favChance(favOk.length)) ? favOk[Math.floor(Math.random() * favOk.length)] : null;
+    var slots = fav ? 3 : 4, wc = [], tagged = [];
+    if (plan) {
+      tagged = pool('랜덤').filter(function (m) { return hasTag(m, plan.tag); });
+      var tg = tagged.filter(function (m) { return exclude.indexOf(m) < 0 && favs.indexOf(m) < 0; });
+      wc = shuffle(tg).slice(0, Math.min(binom(slots, plan.p), tg.length)); // 날씨에 맞는 카드
     }
-    return shuffle(drawBalanced(4, exclude));
+    var rest = drawBalanced(slots - wc.length, exclude.concat(tagged)); // 나머지는 날씨 메뉴가 아닌 것 중에서 분야별로 고르게
+    if (rest.length < slots - wc.length) rest = drawBalanced(slots - wc.length, exclude.concat(wc));
+    wxApplied = wc.length > 0;
+    return shuffle((fav ? [fav] : []).concat(wc, rest));
   }
+  var wxApplied = false;
   var currentCat = '';
   var lastShown = [];
   var picked = false;
@@ -743,17 +803,25 @@
     if (!MENUS) { hint.textContent = '메뉴를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.'; return; }
     var all = pool(currentCat);
     if (!all.length) { hint.textContent = currentCat + ' 분야에는 추천할 메뉴가 없어요. 다른 분야를 골라 보세요.'; lastShown = []; return; }
-    var chosen;
+    var chosen, plan = (!again && wx.mode) ? WX_RULE[wx.mode] : null;
+    wxApplied = false;
     if (currentCat === '랜덤') {
-      chosen = drawRandom(again ? lastShown : []);
+      chosen = drawRandom(again ? lastShown : [], plan);
       if (chosen.length < 4 && again) chosen = drawRandom([]); // 남은 메뉴가 모자라면 방금 나온 메뉴도 다시 후보로
     } else {
       var fresh = again ? all.filter(function (n) { return lastShown.indexOf(n) < 0; }) : all;
       var rest = all.filter(function (n) { return fresh.indexOf(n) < 0; });
       chosen = shuffle(fresh).concat(shuffle(rest)).slice(0, 4);
+      if (plan) {
+        var tg2 = all.filter(function (n) { return hasTag(n, plan.tag); });
+        var wcs = shuffle(tg2).slice(0, Math.min(binom(4, plan.p), tg2.length));
+        var others = shuffle(all.filter(function (n) { return tg2.indexOf(n) < 0; }));
+        chosen = shuffle(wcs.concat(others, shuffle(tg2.filter(function (n) { return wcs.indexOf(n) < 0; }))).slice(0, 4));
+        wxApplied = wcs.length > 0;
+      }
     }
     lastShown = chosen;
-    hint.textContent = '마음에 드는 메뉴를 눌러 고르세요.';
+    hint.textContent = (plan && wxApplied ? plan.line : '') + '마음에 드는 메뉴를 눌러 고르세요.';
     chosen.forEach(function (name) {
       var li = document.createElement('li');
       var b = document.createElement('button'); b.type = 'button'; b.className = 'pickbtn'; b.setAttribute('aria-pressed', 'false'); b.setAttribute('data-name', name);
