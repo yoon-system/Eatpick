@@ -711,7 +711,7 @@
   //   카드 하나하나가 그런 메뉴일 확률: 비 50%, 폭염 75%. 분야를 고른 뒤 처음 나오는 4개에만 적용하고, '다시 뽑기'는 평소대로.
   var wx = { mode: null };
   var WX_RULE = { rain: { tag: 'soup', p: 0.5, label: '따뜻한 국물', line: '비 오는 날이라 따뜻한 국물 메뉴를 더 넣었어요. ' }, heat: { tag: 'cool', p: 0.75, label: '시원한 음식', line: '더운 날이라 시원한 메뉴를 더 넣었어요. ' }, cloud: { dessert: true, label: '달달한 디저트', line: '흐린 날이라 달달한 디저트를 하나 넣었어요. ' } };
-  var RAIN_CODES = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82, 95, 96, 99];
+  var RAIN_CODES = [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 71, 73, 75, 77, 80, 81, 82, 85, 86, 95, 96, 99]; // 비·눈·소나기·뇌우 (눈도 비와 같은 규칙)
   var HEAT_FEEL = 33; // 기상청 폭염주의보 기준(일 최고 체감온도 33°C)을 하루 단위로 적용
   function wxIcon(code) {
     if (code === 0) return '☀️'; if (code === 3) return '☁️'; if (code <= 3) return '⛅'; if (code === 45 || code === 48) return '🌫️';
