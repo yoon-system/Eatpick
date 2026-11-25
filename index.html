@@ -234,6 +234,7 @@
       <label class="field"><span>시·군·구</span><select id="wx-si" disabled></select></label>
     </div>
     <p id="wx-msg" class="form-msg" role="status" aria-live="polite" style="margin:10px 0 0"></p>
+    <p id="wx-src" class="hint" style="margin:10px 0 0">날씨 출처: Open-Meteo</p>
     <p class="hint" style="margin:8px 0 0">기본은 서울이에요. 위치는 날씨를 가져오는 데만 쓰고 저장하거나 서버로 보내지 않아요. 지역 좌표는 통계청 SGIS 행정구역 경계(2018년 기준, 공공누리 제1유형)의 중심점이에요.</p>
     <button id="wx-close" class="linkbtn" type="button" style="display:block;margin:10px auto 0">닫기</button>
   </div>
@@ -791,6 +792,8 @@
       var wet = RAIN_CODES.indexOf(wc) >= 0;
       // 우선순위: 폭염 > 한파 > 비·눈(선선할 때만) > 쌀쌀한 아침
       wx.mode = heat ? 'heat' : cold ? 'cold' : (wet && !(typeof tx === 'number' && tx > RAIN_MAX)) ? 'rain' : le(tn[1], CHILLY_MIN) ? 'chilly' : null;
+      var tm = /^\d{4}-(\d\d)-(\d\d)T(\d\d:\d\d)/.exec(String(cw.time || ''));
+      $('wx-src').textContent = '날씨 출처: Open-Meteo · 기준 시각 ' + (tm ? Number(tm[1]) + '월 ' + Number(tm[2]) + '일 ' + tm[3] + ' (그 지역 시각)' : '확인되지 않음');
       showWx(wx.mode === 'cold' ? '❄️' : wx.mode === 'chilly' ? '🍂' : wxIcon(wx.mode === 'rain' ? wc : cw.weathercode), cw.temperature, false);
     });
   }
